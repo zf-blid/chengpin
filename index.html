@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>大学星轨 · College Orbit</title>
+<style>
+  :root{
+    --bg:#05060f;
+    --ink:#e9edff;
+    --dim:#8b95bd;
+    --line:rgba(125,139,214,.20);
+    --panel:rgba(14,17,36,.82);
+    --cyan:#4de3ff;
+    --violet:#9b6bff;
+    --pink:#ff6bcb;
+    --amber:#ffc861;
+    --green:#5cf0b0;
+    --total:1461; /* 4 年 */
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:ui-sans-serif,system-ui,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+    font-size:15px;line-height:1.7;-webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  #sky{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  .veil{
+    position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:
+      radial-gradient(60% 70% at 18% 12%,rgba(155,107,255,.20),transparent 70%),
+      radial-gradient(55% 65% at 86% 82%,rgba(77,227,255,.14),transparent 70%);
+  }
+  .wrap{position:relative;z-index:2}
+  section{position:relative}
+
+  /* ---------- HUD ---------- */
+  #hud{
+    position:sticky;top:0;z-index:20;
+    backdrop-filter:blur(14px);
+    background:linear-gradient(180deg,rgba(5,6,15,.92),rgba(5,6,15,.62));
+    border-bottom:1px solid var(--line);
+  }
+  #hud .hud-in{
+    max-width:1080px;margin:0 auto;padding:9px 20px;
+    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+  }
+  .who{display:flex;align-items:baseline;gap:9px;margin-right:auto}
+  .who b{font-weight:500;letter-spacing:.05em}
+  .who span{font-size:12px;color:var(--dim)}
+  .stat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+  .stat .track{display:block;width:74px;height:5px;border-radius:99px;background:rgba(233,237,255,.10);overflow:hidden}
+  .stat .fill{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan));transition:width .55s cubic-bezier(.2,.7,.2,1)}
+  .stat .v{font-variant-numeric:tabular-nums;color:var(--ink);min-width:22px;text-align:right}
+  .stat[data-k="social"] .fill{background:linear-gradient(90deg,var(--pink),var(--amber))}
+  .stat[data-k="money"] .fill{background:linear-gradient(90deg,var(--green),var(--cyan))}
+  .stat[data-k="energy"] .fill{background:linear-gradient(90deg,var(--amber),var(--pink))}
+  .days{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .days b{color:var(--cyan);font-weight:500}
+
+  /* ---------- hero ---------- */
+  #hero{min-height:100vh;display:grid;place-items:center;text-align:center;padding:80px 20px}
+  .halo{
+    position:absolute;width:min(560px,86vw);height:min(560px,86vw);border-radius:50%;
+    background:radial-gradient(circle,rgba(77,227,255,.15),transparent 58%);
+    filter:blur(28px);pointer-events:none;
+  }
+  .sys{position:relative;display:grid;place-items:center;width:min(520px,90vw);aspect-ratio:1;--R:calc(min(520px,90vw)/2)}
+  .orbit{position:absolute;inset:0;animation:spin 180s linear infinite}
+  .orbit i{position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(77,227,255,.22)}
+  .orbit i:nth-child(2){inset:11%;border:1px solid rgba(155,107,255,.20);transform:rotate(-16deg) scaleY(.42)}
+  .sat{position:absolute;top:50%;left:50%;width:7px;height:7px;border-radius:50%;
+    background:var(--c,var(--cyan));box-shadow:0 0 10px 2px color-mix(in srgb,var(--c,var(--cyan)) 60%,transparent);
+    transform:translate(-50%,-50%) rotate(var(--a)) translateX(calc(var(--R) - 7px))}
+  .labels{position:absolute;inset:0;pointer-events:none}
+  .sat-l{position:absolute;top:50%;left:50%;font-size:11px;letter-spacing:.1em;color:var(--dim);white-space:nowrap;
+    transform:translate(-50%,-50%) rotate(var(--a)) translateX(calc(var(--R) + 13px)) rotate(calc(-1 * var(--a)))}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  #planet{
+    position:relative;width:min(196px,40vw);aspect-ratio:1;border-radius:50%;
+    background:
+      radial-gradient(circle at 32% 28%,rgba(155,228,255,.52) 0%,rgba(70,150,255,.16) 22%,transparent 54%),
+      radial-gradient(circle at 74% 78%,rgba(18,6,48,.85) 0%,rgba(18,6,48,.32) 40%,transparent 64%),
+      radial-gradient(circle at 63% 38%,rgba(92,40,190,.32) 0%,transparent 27%),
+      radial-gradient(circle at 40% 64%,rgba(48,120,240,.28) 0%,transparent 25%),
+      radial-gradient(circle at 34% 32%,#5ab8ee 0%,#3a58ec 32%,#6a2ed0 70%,#1a0d3a 100%);
+    box-shadow:
+      inset -20px -24px 52px -18px rgba(0,0,0,.95),
+      inset 0 0 26px -6px rgba(120,215,255,.20),
+      0 0 0 1px rgba(130,220,255,.16),
+      0 0 52px -12px rgba(77,227,255,.32),
+      0 0 118px -44px rgba(155,107,255,.58);
+  }
+  .hero-copy{margin-top:34px;position:relative}
+  .hero-copy .k{font-size:13px;letter-spacing:.22em;color:var(--dim)}
+  .hero-copy h1{margin:10px 0 0;font-size:clamp(24px,4.6vw,40px);font-weight:500;letter-spacing:.01em;line-height:1.3}
+  .hero-copy h1 em{font-style:normal;color:var(--cyan)}
+  .chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+  .chip{font-size:12px;padding:4px 12px;border-radius:99px;background:rgba(155,107,255,.20);border:1px solid rgba(155,107,255,.38)}
+  .hint{margin-top:26px;font-size:11px;letter-spacing:.26em;color:rgba(139,149,189,.75)}
+
+  /* 结局预览 */
+  .peek{margin-top:30px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+  .peek div{
+    width:132px;padding:12px 10px;border-radius:12px;font-size:12px;color:var(--dim);
+    background:rgba(14,17,36,.6);border:1px dashed rgba(125,139,214,.28);
+  }
+  .peek strong{display:block;font-weight:500;font-size:15px;color:var(--ink);letter-spacing:.34em;margin-bottom:5px}
+
+  /* ---------- 通用 section ---------- */
+  .inner{max-width:1080px;margin:0 auto;padding:96px 20px}
+  h2.sec{margin:0;font-size:13px;font-weight:500;letter-spacing:.24em;color:var(--dim)}
+  h2.sec + .sec-t{margin:8px 0 30px;font-size:clamp(20px,3vw,28px);font-weight:500}
+
+  /* ---------- 轨道地图 ---------- */
+  .map{display:grid;grid-template-columns:1fr;gap:2px;max-width:620px}
+  .yr{position:relative;padding:0 0 22px 26px}
+  .yr::before{content:"";position:absolute;left:5px;top:8px;bottom:-4px;width:1px;background:rgba(233,237,255,.16)}
+  .yr:last-child::before{display:none}
+  .yr::after{content:"";position:absolute;left:0;top:6px;width:11px;height:11px;border-radius:50%;background:var(--bg);border:1px solid var(--dim)}
+  .yr[data-s="done"]::after{background:var(--green);border-color:transparent}
+  .yr[data-s="now"]::after{background:var(--cyan);border-color:transparent;box-shadow:0 0 14px 1px rgba(77,227,255,.7)}
+  .yr[data-s="lock"]::after{border-style:dashed}
+  .yr .yk{font-size:15px;font-weight:500}
+  .yr .ys{font-size:12.5px;color:var(--dim);margin-top:2px}
+  .lanes{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
+  .lane{font-size:11px;padding:3px 10px;border-radius:99px;color:var(--dim);border:1px dashed rgba(233,237,255,.22)}
+  .lane[data-p="1"]{color:var(--ink);border-style:solid;border-color:transparent;background:rgba(77,227,255,.24)}
+
+  /* ---------- 事件卡 ---------- */
+  .card{
+    max-width:700px;border-radius:16px;padding:24px;
+    background:var(--panel);border:1px solid rgba(155,107,255,.32);
+    box-shadow:0 0 60px -34px rgba(155,107,255,.95);
+  }
+  .card .k{font-size:11px;letter-spacing:.22em;color:rgba(77,227,255,.85)}
+  .card h3{margin:8px 0 0;font-size:clamp(18px,2.6vw,23px);font-weight:500;line-height:1.45}
+  .card .desc{margin-top:9px;font-size:13.5px;color:var(--dim)}
+  .opts{margin-top:18px;display:grid;gap:9px}
+  .opt{
+    display:grid;gap:4px;width:100%;text-align:left;padding:12px 14px;border-radius:11px;
+    font:inherit;color:var(--ink);cursor:pointer;transition:border-color .2s,background .2s,transform .12s;
+    background:rgba(233,237,255,.045);border:1px solid rgba(233,237,255,.10);
+  }
+  .opt:hover{border-color:rgba(77,227,255,.55);transform:translateX(2px)}
+  .opt .ok{font-size:14.5px;font-weight:500}
+  .opt .od{font-size:12px;color:var(--dim)}
+  .opt .dl{display:flex;gap:9px;flex-wrap:wrap;font-size:11.5px;font-variant-numeric:tabular-nums;margin-top:2px}
+  .up{color:var(--green)}.dn{color:var(--pink)}
+  .rest{border-color:rgba(255,200,97,.45)}
+  .rest .k{color:var(--amber)}
+
+  /* 结果条 */
+  #outcome{max-width:700px;margin-top:14px;font-size:13.5px;color:var(--dim);min-height:26px}
+  #outcome b{color:var(--ink);font-weight:500}
+
+  /* ---------- 结局 ---------- */
+  #ending{display:none}
+  #ending.on{display:block}
+  .end{
+    max-width:760px;border-radius:18px;padding:32px;
+    background:linear-gradient(150deg,rgba(155,107,255,.16),rgba(14,17,36,.86) 55%);
+    border:1px solid rgba(77,227,255,.30);
+  }
+  .end .k{font-size:11px;letter-spacing:.24em;color:var(--cyan)}
+  .end h3{margin:10px 0 0;font-size:clamp(24px,4vw,34px);font-weight:500}
+  .end p{margin:14px 0 0;color:var(--dim);max-width:56ch}
+  .end .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:24px}
+  .end .grid div{padding:12px;border-radius:11px;background:rgba(233,237,255,.05);font-size:12px;color:var(--dim)}
+  .end .grid b{display:block;font-size:21px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+  .end .log{margin-top:24px;font-size:12.5px;color:var(--dim);max-height:190px;overflow:auto;padding-right:6px}
+  .end .log p{margin:0 0 9px;color:var(--dim)}
+  .end .log span{color:var(--cyan)}
+
+  /* ---------- 按钮 / 工具 ---------- */
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:22px}
+  button.b{
+    font:inherit;font-size:13px;padding:8px 16px;border-radius:10px;cursor:pointer;
+    color:var(--ink);background:rgba(233,237,255,.07);border:1px solid rgba(233,237,255,.16);
+    transition:border-color .2s,background .2s;
+  }
+  button.b:hover{border-color:rgba(77,227,255,.6);background:rgba(77,227,255,.10)}
+  button.b.p{background:rgba(77,227,255,.20);border-color:transparent}
+  textarea.code{
+    width:100%;max-width:700px;height:74px;margin-top:12px;padding:10px;border-radius:10px;resize:vertical;
+    font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink);
+    background:rgba(0,0,0,.36);border:1px solid var(--line);
+  }
+  .note{font-size:12px;color:var(--dim);margin-top:8px}
+
+  /* ---------- toast ---------- */
+  #toast{
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);z-index:40;
+    padding:11px 18px;border-radius:12px;font-size:13px;max-width:88vw;
+    background:rgba(14,17,36,.96);border:1px solid rgba(77,227,255,.42);
+    box-shadow:0 18px 40px -18px rgba(0,0,0,.9);transition:transform .45s cubic-bezier(.2,.8,.2,1);
+  }
+  #toast.on{transform:translate(-50%,0)}
+
+  .fx{position:fixed;width:6px;height:6px;border-radius:2px;z-index:50;pointer-events:none}
+
+  footer{position:relative;z-index:2;padding:40px 20px 70px;text-align:center;font-size:11.5px;color:rgba(139,149,189,.6)}
+
+  @media (max-width:720px){
+    #hud .hud-in{gap:10px;padding:8px 14px}
+    .who span{display:none}
+    .stat .track{width:46px}
+    .inner{padding:70px 18px}
+    .card{padding:18px}
+    .sat-l{display:none}
+  }
+  @media (prefers-reduced-motion:reduce){
+    html{scroll-behavior:auto}
+    .orbit{animation:none}
+    *{transition-duration:.01ms !important}
+  }
+</style>
+</head>
+<body>
+<canvas id="sky"></canvas>
+<div class="veil"></div>
+
+<div class="wrap">
+
+  <header id="hud">
+    <div class="hud-in">
+      <div class="who"><b>大学星轨</b><span id="whoSub">2024 级 · 软件工程</span></div>
+      <div class="stat" data-k="academic"><span>学术</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
+      <div class="stat" data-k="social"><span>社交</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
+      <div class="stat" data-k="money"><span>搞钱</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
+      <div class="stat" data-k="energy"><span>精力</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
+      <div class="days">还有 <b id="daysLeft">1461</b> 天毕业</div>
+    </div>
+  </header>
+
+  <!-- ============ 星轨门面 ============ -->
+  <section id="hero">
+    <div style="position:relative;display:grid;place-items:center">
+      <div class="halo"></div>
+      <div class="sys">
+        <div class="orbit">
+          <i></i><i></i>
+          <span class="sat" style="--a:24deg;--c:#4de3ff"></span>
+          <span class="sat" style="--a:120deg;--c:#9b6bff"></span>
+          <span class="sat" style="--a:212deg;--c:#ffc861"></span>
+          <span class="sat" style="--a:302deg;--c:#5cf0b0"></span>
+        </div>
+        <div class="labels">
+          <span class="sat-l" style="--a:24deg">英语</span>
+          <span class="sat-l" style="--a:120deg">社团</span>
+          <span class="sat-l" style="--a:212deg">绩点</span>
+          <span class="sat-l" style="--a:302deg">存款</span>
+        </div>
+        <div id="planet"></div>
+      </div>
+
+      <div class="hero-copy">
+        <div class="k">衡阳 → 某大学 → 2027 届</div>
+        <h1>你还有 <em id="heroDays">1461</em> 天毕业</h1>
+        <div class="chips" id="chips"></div>
+      </div>
+
+      <div class="peek">
+        <div><strong>上岸</strong>迷雾中</div>
+        <div><strong>Offer</strong>迷雾中</div>
+        <div><strong>延毕</strong>迷雾中</div>
+      </div>
+
+      <div class="hint">向下滚动 ↓</div>
+    </div>
+  </section>
+
+  <!-- ============ 轨道地图 ============ -->
+  <section id="mapSec">
+    <div class="inner">
+      <h2 class="sec">ORBIT MAP</h2>
+      <div class="sec-t">你的大学只有四个节点，但只有一次分叉</div>
+      <div class="map" id="map"></div>
+    </div>
+  </section>
+
+  <!-- ============ 核心循环：事件卡 ============ -->
+  <section id="loopSec">
+    <div class="inner">
+      <h2 class="sec">EVENT</h2>
+      <div class="sec-t" id="loopTitle">现在，做决定</div>
+      <div id="loop"></div>
+      <div id="outcome" role="status" aria-live="polite"></div>
+    </div>
+  </section>
+
+  <!-- ============ 结局 ============ -->
+  <section id="ending">
+    <div class="inner">
+      <h2 class="sec">ENDING</h2>
+      <div class="sec-t">四年之后</div>
+      <div class="end" id="endCard"></div>
+    </div>
+  </section>
+
+  <!-- ============ 存档 ============ -->
+  <section id="saveSec">
+    <div class="inner">
+      <h2 class="sec">SAVE</h2>
+      <div class="sec-t">数据存在这台设备的浏览器里，换设备就带走这串码</div>
+      <div class="row">
+        <button class="b p" type="button" id="btnExport">导出星轨码</button>
+        <button class="b" type="button" id="btnImport">导入</button>
+        <button class="b" type="button" id="btnReset">重新开始</button>
+      </div>
+      <textarea class="code" id="codeBox" spellcheck="false" aria-label="星轨码" placeholder="点「导出星轨码」生成；或把之前存下的码粘到这里，再点「导入」。"></textarea>
+      <div class="note" id="saveNote"></div>
+    </div>
+  </section>
+
+  <footer>大学星轨 v1 · 单文件零依赖 · 关掉浏览器进度还在</footer>
+</div>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* =====================================================================
+     1. 数据层 —— 整个游戏就是这张表 + 一个状态对象
+     ===================================================================== */
+
+  var KEYS = ['academic', 'social', 'money', 'energy'];
+  var LABEL = { academic: '学术力', social: '社交力', money: '搞钱力', energy: '精力' };
+  var TOTAL_DAYS = 1461;
+
+  var FRESH = {
+    stats: { academic: 40, social: 35, money: 20, energy: 80 },
+    qi: 0,                 // 在队列里的位置
+    lane: null,            // 大三分叉点选中的轨道
+    day: 0,                // 已经过去的天
+    log: [],               // 做过的事
+    forcedRestFor: -1,     // 精力见底时插入的休息卡，避免重复触发
+    lastSeen: 0
+  };
+
+  // phase: pre = 分叉前 / branch = 分叉点 / post = 分叉后
+  // onlyLane: 只在该轨道出现
+  var EVENTS = [
+    {
+      id: 'e1', year: '大一 · 秋', phase: 'pre', days: 40,
+      title: '社团招新，两百个摊位',
+      desc: '军训刚结束，你站在体育馆门口，手上被塞了七张传单，一张都没看。',
+      options: [
+        { k: '加入辩论队', d: '一周两次训练，晚上十点散场', x: { social: 9, academic: 3, energy: -8 }, o: '第一次上场你结巴了三十秒，但没有一个人笑你。' },
+        { k: '只去图书馆', d: '把绩点先攥在手里', x: { academic: 10, social: -5, energy: -3 }, o: '高数第一次小测，你是班里前五。没人知道你是谁。' },
+        { k: '一张都不接', d: '回宿舍，上分', x: { energy: 9, academic: -4, social: -3 }, o: '这个学期你上了星耀。除此之外你想不起别的。' }
+      ]
+    },
+    {
+      id: 'e2', year: '大一 · 冬', phase: 'pre', days: 55,
+      title: '高数期中，你考了 58',
+      desc: '差两分及格。老师划的重点你一个都没背，因为你觉得那是重点。',
+      options: [
+        { k: '去堵老师办公室', d: '问清楚到底怎么学', x: { academic: 8, social: 4, energy: -5 }, o: '老师给了你一份往年卷子，还记住了你的名字。' },
+        { k: '自己刷题刷到天亮', d: '谁都不问', x: { academic: 6, energy: -12 }, o: '期末你考了 84。你学会了怎么自己啃一个东西。' },
+        { k: '算了，下学期重修', d: '先把英语四级过了', x: { academic: -5, energy: 6, social: 1 }, o: '你把高数挂在了那里。它会在后面等你。' }
+      ]
+    },
+    {
+      id: 'e3', year: '大一下 · 春', phase: 'pre', days: 60,
+      title: '室友拉你翘课去凤凰',
+      desc: '周五晚上的火车，周日回来。实验课点名，但没人替你答到。',
+      options: [
+        { k: '去', d: '青春只有一次', x: { social: 11, energy: 6, academic: -6, money: -6 }, o: '你在沱江边坐了整晚。这四年你会反复想起这两天。' },
+        { k: '不去，留在学校做课设', d: '', x: { academic: 9, money: -1, energy: -6 }, o: '课设你做得不错，被老师拿去当范本。' },
+        { k: '翘课，但自己一个人去', d: '不跟他们一起', x: { social: -5, energy: 9, academic: -4 }, o: '你一个人逛完了所有巷子。有些事只能一个人做。' }
+      ]
+    },
+    {
+      id: 'e4', year: '大二 · 秋', phase: 'pre', days: 70,
+      title: '院里发了一个竞赛的通知',
+      desc: '要求三人组队，五个月。你正好有想法，但你缺两个人。',
+      options: [
+        { k: '找最好的两个朋友组队', d: '感情和奖金一起赌', x: { academic: 10, social: 7, energy: -12 }, o: '省二。答辩那天你们仨在台上互相看着笑。' },
+        { k: '拉两个不熟但是强的人', d: '纯为结果', x: { academic: 13, social: -3, energy: -10 }, o: '省一。做完之后你们再没说过话。' },
+        { k: '放弃，专心搞钱', d: '去接单', x: { money: 12, academic: -5, energy: -6 }, o: '你这学期赚到了一台新电脑的钱。' }
+      ]
+    },
+    {
+      id: 'e5', year: '大二 · 春', phase: 'pre', days: 65,
+      title: '有个实验室愿意要你',
+      desc: '导师说方向不错，但一周要待够二十个小时，没有补贴。',
+      options: [
+        { k: '进实验室', d: '为保研铺路', x: { academic: 12, energy: -11, money: -4 }, o: '你开始看得懂论文了。这个变化你自己能感觉到。' },
+        { k: '去公司实习', d: '先看看外面什么样', x: { money: 13, social: 6, energy: -9, academic: -3 }, o: '你第一次拿到工资条，金额有点少，但那是真的。' },
+        { k: '哪边都不去', d: '这一年先过好', x: { energy: 10, social: 6, academic: -4, money: -2 }, o: '你过得挺开心的。大三你会为这句话付一点代价。' }
+      ]
+    },
+    {
+      id: 'e6', year: '大二 · 夏', phase: 'pre', days: 75,
+      title: '暑假两个月，回家还是留校',
+      desc: '回家有饭吃、有空调、没人管你。留校可以继续做手上那件事。',
+      options: [
+        { k: '留校，把手上的做完', d: '', x: { academic: 9, money: 5, energy: -8 }, o: '两个月你把这个项目做完了，它后来写进了简历第一行。' },
+        { k: '回家，什么都不干', d: '', x: { energy: 14, money: -3, academic: -5 }, o: '你睡了两个月。开学的时候你精神好得不像话。' },
+        { k: '回家陪爸妈，顺便学车', d: '', x: { social: 7, money: -6, energy: 7, academic: -2 }, o: '你拿到了驾照，也第一次认真看了你爸的白头发。' }
+      ]
+    },
+    {
+      id: 'e7', year: '大三上', phase: 'branch', days: 90, branch: true,
+      title: '分叉点：接下来两年怎么过',
+      desc: '四条轨道在今晚分开。选完不可逆，你会一直走到大四那个 Boss。',
+      options: [
+        { k: '全力备考', d: '考研轨', lane: '考研', x: { academic: 12, energy: -14, money: -5, social: -7 }, o: '你把书桌搬到了自习室。从今天起，你的世界只剩一张桌子。' },
+        { k: '投实习，先进大厂', d: '就业轨', lane: '就业', x: { money: 14, social: 7, energy: -11, academic: -4 }, o: '你开始改简历。改到第九版的时候，你终于知道该写什么了。' },
+        { k: '申请出国交换', d: '留学轨', lane: '留学', x: { academic: 6, social: 10, energy: 2, money: -15 }, o: '你开始准备材料。托福报名费让你心疼了很久。' },
+        { k: '不想了，先活着', d: '摆烂轨 —— 它也是一条正经轨道', lane: '摆烂', x: { energy: 16, social: 5, academic: -12, money: -5 }, o: '你把所有 App 的通知都关了。第一天有点慌，第三天就习惯了。' }
+      ]
+    },
+    {
+      id: 'e8-kaoyan', year: '大三下', phase: 'post', onlyLane: '考研', days: 80,
+      title: '自习室旁边的位置空了',
+      desc: '那个每天比你早到的人，昨天开始没来了。桌上留了半盒笔。',
+      options: [
+        { k: '照常，不带情绪', d: '', x: { academic: 11, energy: -10 }, o: '你的进度没乱。这本身就是一种能力。' },
+        { k: '去问问他还考不考', d: '', x: { social: 9, academic: -3, energy: -5 }, o: '他放弃了，去了他爸的公司。你替他把书搬下楼。' }
+      ]
+    },
+    {
+      id: 'e8-jiuye', year: '大三下', phase: 'post', onlyLane: '就业', days: 80,
+      title: '实习转正的窗口开了',
+      desc: 'mentor 找你聊了十分钟，意思是留下来可以，但要签三方，不能再投别家。',
+      options: [
+        { k: '签', d: '先把确定性拿到手', x: { money: 13, energy: 5, academic: -2 }, o: '你成了宿舍里第一个有 offer 的人。你没有很高兴。' },
+        { k: '不签，继续投', d: '赌一个更好的', x: { money: -4, energy: -10, social: 5 }, o: '你拒掉了唯一确定的东西。接下来的三个月很不好受。' }
+      ]
+    },
+    {
+      id: 'e8-liuxue', year: '大三下', phase: 'post', onlyLane: '留学', days: 80,
+      title: '推荐信，你要开口了',
+      desc: '你需要在两周内拿到两封。其中一个老师，你只上过他一学期的课。',
+      options: [
+        { k: '认真准备材料去要', d: '', x: { academic: 8, social: 8, energy: -8 }, o: '他记得你坐在第三排。他同意了。' },
+        { k: '找那个最熟的老师', d: '只拿一封，另一封再想', x: { social: 11, academic: 3, energy: -4 }, o: '他写了一封很长的信，还说了一句"你适合出去"。' }
+      ]
+    },
+    {
+      id: 'e8-bailan', year: '大三下', phase: 'post', onlyLane: '摆烂', days: 80,
+      title: '导员把你叫去了办公室',
+      desc: '桌上摊着你的成绩单。他没骂你，只是问你，最近是不是有事。',
+      options: [
+        { k: '说实话', d: '承认自己不知道要干嘛', x: { social: 9, energy: 8, academic: -2 }, o: '他给你倒了杯水，说很多人到大四才想明白。你信了一半。' },
+        { k: '说没事，就是忙', d: '', x: { energy: 4, academic: 2 }, o: '他没再问。出来的时候你在楼梯口站了一会儿。' }
+      ]
+    },
+    {
+      id: 'e9', year: '大四 · 秋', phase: 'post', days: 95, boss: true,
+      title: 'Boss 战：这三年全部要来结账了',
+      desc: '秋招、复试、材料、论文，全部挤在同一个月。',
+      options: [
+        { k: '按计划硬顶过去', d: '看你的数值够不够', x: { academic: 6, money: 6, energy: -13 }, o: '你把这一个月当成了一场考试，而你已经复习了三年。' },
+        { k: '先保一样，其余放掉', d: '精力优先', x: { energy: 9, academic: -6, money: -6 }, o: '你保住了自己。有些东西你没拿到，但你还能睡着觉。' }
+      ]
+    }
+  ];
+
+  /* 结局判定：轨道 + 数值门槛 */
+  var ENDINGS = [
+    { lane: '考研', test: function (s) { return s.academic >= 78; }, title: '上岸', text: '拟录取名单出来的那个下午，你在自习室坐了很久没动。这一年的桌子，没白占。' },
+    { lane: '考研', test: function () { return true; }, title: '二战', text: '差了几分。你回家待了一个月，然后收拾东西回了学校附近。你没有告诉太多人。' },
+    { lane: '就业', test: function (s) { return s.money >= 70; }, title: 'Offer 到手', text: '签三方那天你拍了张照，没发朋友圈。你知道这份工作不完美，但它是你自己挣的。' },
+    { lane: '就业', test: function () { return true; }, title: '还在投', text: '毕业的时候你手上还没有确定的东西。你比谁都清楚这跟能力无关，但这句话没人爱听。' },
+    { lane: '留学', test: function (s) { return s.social >= 70 && s.academic >= 60; }, title: '拿到 offer', text: '邮件是凌晨到的，你看到了就直接把手机扣在枕头上，怕吵醒室友。' },
+    { lane: '留学', test: function () { return true; }, title: 'Gap 一年', text: '你没走成。你留在学校旁边租了个房子，一边打工一边重新准备。' },
+    { lane: '摆烂', test: function (s) { return s.energy >= 80; }, title: '活着，且不后悔', text: '你的成绩单不好看，但这四年你睡够了、去过很多地方、认识了几个人。你觉得这笔账算得过来。' },
+    { lane: '摆烂', test: function () { return true; }, title: '延毕风险', text: '学分差两个。教务处的老师让你下学期再来一趟。你站在窗口前，想不起自己是怎么走到这里的。' }
+  ];
+
+  var ALLROUND = { title: '什么都要的那个你', text: '你的四条线都没有拉满，但也都没有断。这种人毕业后通常会过得比成绩单好看。' };
+
+  /* =====================================================================
+     2. 状态读写
+     ===================================================================== */
+
+  var SKEY = 'college-orbit-v1';
+  var state = load();
+
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(SKEY);
+      if (!raw) return clone(FRESH);
+      var p = JSON.parse(raw);
+      var s = clone(FRESH);
+      if (p && typeof p === 'object') {
+        if (p.stats) KEYS.forEach(function (k) { if (typeof p.stats[k] === 'number') s.stats[k] = p.stats[k]; });
+        ['qi', 'day', 'forcedRestFor', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
+        if (typeof p.lane === 'string' && ['考研', '就业', '留学', '摆烂'].indexOf(p.lane) >= 0) s.lane = p.lane;
+        if (Array.isArray(p.log)) s.log = p.log.slice(-40);
+      }
+      return s;
+    } catch (e) { return clone(FRESH); }
+  }
+
+  function save() {
+    state.lastSeen = Date.now();
+    try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {}
+  }
+
+  function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+  function daysLeft() { return Math.max(0, TOTAL_DAYS - state.day); }
+
+  /* =====================================================================
+     3. 队列 —— 事件表怎么变成一条能走的线
+     ===================================================================== */
+
+  function queue() {
+    var q = [];
+    for (var i = 0; i < EVENTS.length; i++) {
+      var e = EVENTS[i];
+      if (e.onlyLane && e.onlyLane !== state.lane) continue;
+      q.push(e);
+    }
+    return q;
+  }
+
+  function currentEvent() {
+    var q = queue();
+    return q[Math.min(state.qi, q.length - 1)];
+  }
+
+  function nearEnd() { return state.qi >= queue().length; }
+
+  /* =====================================================================
+     4. 表现层
+     ===================================================================== */
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function renderHud() {
+    KEYS.forEach(function (k) {
+      var el = document.querySelector('.stat[data-k="' + k + '"]');
+      var v = clamp(state.stats[k]);
+      el.querySelector('.fill').style.width = v + '%';
+      el.querySelector('.v').textContent = v;
+      el.setAttribute('aria-label', LABEL[k] + ' ' + v);
+    });
+    $('daysLeft').textContent = daysLeft();
+    $('heroDays').textContent = daysLeft();
+    $('whoSub').textContent = state.lane ? ('2024 级 · ' + state.lane + '轨') : '2024 级 · 软件工程';
+    var c = $('chips');
+    c.innerHTML = '';
+    var chips = state.lane
+      ? ['已分叉 · ' + state.lane + '轨', '进度 ' + state.log.length + ' / ' + queue().length, '结局已锁定']
+      : ['四条轨道未生成', '分叉点在大三上', '结局预览 · 迷雾中'];
+    chips.forEach(function (t) {
+      var s = document.createElement('span');
+      s.className = 'chip'; s.textContent = t; c.appendChild(s);
+    });
+  }
+
+  function renderMap() {
+    var q = queue();
+    var doneN = state.log.length;
+    var years = [
+      { k: '大一', s: '星云很淡 · 社团 / 绩点 / 英语', from: 0, to: 3 },
+      { k: '大二', s: '卫星变多 · 竞赛 / 实习 / 实验室', from: 3, to: 6 },
+      { k: '大三 · 分叉点', s: state.lane ? ('已锁定：' + state.lane + '轨') : '四条轨道在这里分开，选完不可逆', from: 6, to: 8, lanes: true },
+      { k: '大四 · Boss 战', s: '秋招 / 复试 / 论文 → 结局卡飞入', from: 8, to: 99 }
+    ];
+    var html = '';
+    years.forEach(function (y) {
+      var st = doneN >= y.to ? 'done' : (doneN >= y.from ? 'now' : 'lock');
+      html += '<div class="yr" data-s="' + st + '"><div class="yk">' + y.k + '</div><div class="ys">' + y.s + '</div>';
+      if (y.lanes) {
+        html += '<div class="lanes">';
+        ['考研', '就业', '留学', '摆烂'].forEach(function (l) {
+          html += '<span class="lane" data-p="' + (state.lane === l ? '1' : '0') + '">' + l + '轨</span>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+    });
+    $('map').innerHTML = html;
+  }
+
+  function deltaChips(x) {
+    return KEYS.filter(function (k) { return x[k]; }).map(function (k) {
+      var v = x[k];
+      return '<span class="' + (v > 0 ? 'up' : 'dn') + '">' + LABEL[k] + ' ' + (v > 0 ? '+' : '−') + Math.abs(v) + '</span>';
+    }).join('');
+  }
+
+  function renderLoop() {
+    var box = $('loop');
+    var needRest = state.stats.energy < 15 && state.forcedRestFor !== state.qi;
+    var e = currentEvent();
+
+    if (!e || nearEnd()) { box.innerHTML = ''; $('loopTitle').textContent = '你走完了这条轨道'; return; }
+
+    if (needRest) {
+      $('loopTitle').textContent = '你撑不住了';
+      box.innerHTML =
+        '<div class="card rest">' +
+          '<div class="k">FORCED REST</div>' +
+          '<h3>精力见底，这周你什么都做不了</h3>' +
+          '<div class="desc">身体先替你做了决定。休息不算浪费，只是账换了个地方记。</div>' +
+          '<div class="opts">' +
+            '<button class="opt" type="button" data-rest="1">' +
+              '<span class="ok">睡满整个周末</span>' +
+              '<span class="od">精力回一部分，进度停两周</span>' +
+              '<span class="dl">' + deltaChips({ energy: 26, academic: -3 }) + '</span>' +
+            '</button>' +
+          '</div>' +
+        '</div>';
+      return;
+    }
+
+    $('loopTitle').textContent = e.branch ? '这一下决定后面两年' : '现在，做决定';
+    var h = '<div class="card">' +
+      '<div class="k">' + e.year + '　·　' + (e.branch ? 'BRANCH' : (e.boss ? 'BOSS' : 'EVENT')) + '</div>' +
+      '<h3>' + e.title + '</h3>' +
+      '<div class="desc">' + e.desc + '</div><div class="opts">';
+    e.options.forEach(function (o, i) {
+      h += '<button class="opt" type="button" data-i="' + i + '"' + (o.lane ? ' data-lane="' + o.lane + '"' : '') + '>' +
+        '<span class="ok">' + o.k + (o.d ? '　<small style="color:var(--dim);font-weight:400">' + o.d + '</small>' : '') + '</span>' +
+        '<span class="dl">' + deltaChips(o.x) + '</span>' +
+      '</button>';
+    });
+    box.innerHTML = h + '</div></div>';
+  }
+
+  function applyChoice(e, o) {
+    KEYS.forEach(function (k) { if (o.x && o.x[k]) state.stats[k] = clamp(state.stats[k] + o.x[k]); });
+    if (o.lane) state.lane = o.lane;
+    state.day = Math.min(TOTAL_DAYS, state.day + (e.days || 30));
+    state.log.push({ y: e.year, t: e.title, c: o.k, o: o.o });
+    state.qi++;
+    $('outcome').innerHTML = '<b>' + o.k + '</b>　' + o.o;
+    if (o.lane) burst(90, ['#4de3ff', '#9b6bff', '#5cf0b0']);
+    else burst(34, ['#4de3ff', '#9b6bff']);
+    save(); renderAll();
+  }
+
+  function rest() {
+    state.stats.energy = clamp(state.stats.energy + 26);
+    state.stats.academic = clamp(state.stats.academic - 3);
+    state.day = Math.min(TOTAL_DAYS, state.day + 14);
+    state.forcedRestFor = state.qi;
+    $('outcome').innerHTML = '<b>你睡了两天</b>　醒来的时候，窗外在下雨，你居然有点想吃食堂的饭。';
+    save(); renderAll();
+  }
+
+  function pickEnding() {
+    var s = state.stats;
+    if (!state.lane) return ALLROUND;
+    var list = ENDINGS.filter(function (e) { return e.lane === state.lane; });
+    for (var i = 0; i < list.length; i++) if (list[i].test(s)) return list[i];
+    return list[list.length - 1];
+  }
+
+  function renderEnding() {
+    var on = nearEnd() || state.stats.energy <= 0;
+    var sec = $('ending');
+    if (!on) { sec.classList.remove('on'); return; }
+    sec.classList.add('on');
+    var e = pickEnding();
+    var html = '<div class="k">ENDING　·　' + (state.lane ? state.lane + '轨' : '未分叉') + '</div>' +
+      '<h3>' + e.title + '</h3><p>' + e.text + '</p>' +
+      '<div class="grid">';
+    KEYS.forEach(function (k) {
+      html += '<div>' + LABEL[k] + '<b>' + clamp(state.stats[k]) + '</b></div>';
+    });
+    html += '<div>走过节点<b>' + state.log.length + '</b></div>';
+    html += '<div>用时天数<b>' + Math.min(state.day, TOTAL_DAYS) + '</b></div></div>';
+    if (state.log.length) {
+      html += '<div class="log">';
+      state.log.forEach(function (l) {
+        html += '<p><span>' + l.y + '</span>　' + l.t + '　→　' + l.c + '<br>' + l.o + '</p>';
+      });
+      html += '</div>';
+    }
+    html += '<div class="row"><button class="b p" type="button" id="btnEndExport">把这四年存成码</button>' +
+      '<button class="b" type="button" id="btnAgain">换一条轨道重来</button></div>';
+    $('endCard').innerHTML = html;
+    var be = $('btnEndExport'), ba = $('btnAgain');
+    if (be) be.addEventListener('click', doExport);
+    if (ba) ba.addEventListener('click', doReset);
+    burst(60, ['#4de3ff', '#9b6bff', '#ffc861']);
+  }
+
+  function renderAll() { renderHud(); renderMap(); renderLoop(); renderEnding(); }
+
+  /* =====================================================================
+     5. 交互绑定
+     ===================================================================== */
+
+  $('loop').addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('button') : null;
+    if (!b) return;
+    if (b.hasAttribute('data-rest')) return rest();
+    var i = parseInt(b.getAttribute('data-i'), 10);
+    var e = currentEvent();
+    if (!e || !e.options[i]) return;
+    applyChoice(e, e.options[i]);
+  });
+
+  function doExport() {
+    var code = '';
+    try {
+      var bytes = new TextEncoder().encode(JSON.stringify(state));
+      var bin = '';
+      for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      code = btoa(bin);
+    } catch (err) { code = ''; }
+    var box = $('codeBox');
+    if (box) { box.value = code; box.select(); }
+    $('saveNote').textContent = '这串码里有你全部的数值、轨道和选择记录。存到备忘录里就能换设备。';
+    toast('已生成，复制走吧');
+  }
+
+  function doImport() {
+    var box = $('codeBox');
+    var raw = box ? box.value.trim() : '';
+    if (!raw) { toast('先粘贴你存下的那串码'); return; }
+    try {
+      var bin = atob(raw);
+      var bytes = new Uint8Array(bin.length);
+      for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+      var p = JSON.parse(new TextDecoder().decode(bytes));
+      if (!p || !p.stats) throw new Error('bad');
+      state = load2(p);
+      save(); renderAll();
+      $('outcome').innerHTML = '<b>已导入</b>　你的星轨接回来了。';
+      toast('接回来了');
+    } catch (err) { toast('这串码读不出来，检查一下有没有漏字符'); }
+  }
+
+  function load2(p) {
+    var s = clone(FRESH);
+    KEYS.forEach(function (k) { if (typeof p.stats[k] === 'number') s.stats[k] = clamp(p.stats[k]); });
+    ['qi', 'day', 'forcedRestFor', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
+    if (typeof p.lane === 'string' && ['考研', '就业', '留学', '摆烂'].indexOf(p.lane) >= 0) s.lane = p.lane;
+    if (Array.isArray(p.log)) s.log = p.log.slice(-40);
+    return s;
+  }
+
+  function doReset() {
+    try { localStorage.removeItem(SKEY); } catch (e) {}
+    state = clone(FRESH); save(); renderAll();
+    $('outcome').textContent = '';
+    $('codeBox').value = '';
+    $('saveNote').textContent = '';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    toast('新的星轨开始了');
+  }
+
+  $('btnExport').addEventListener('click', doExport);
+  $('btnImport').addEventListener('click', doImport);
+  $('btnReset').addEventListener('click', doReset);
+
+  /* =====================================================================
+     6. 氛围：星场 / 撒花 / 归来礼包
+     ===================================================================== */
+
+  var cv = $('sky'), cx = cv.getContext('2d'), stars = [], dpr = 1;
+
+  function buildStars() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    cv.width = Math.floor(innerWidth * dpr);
+    cv.height = Math.floor(innerHeight * dpr);
+    var n = Math.round(Math.min(190, innerWidth / 7));
+    stars = [];
+    for (var i = 0; i < n; i++) {
+      stars.push({
+        x: Math.random() * cv.width, y: Math.random() * cv.height,
+        r: (Math.random() * 1.5 + 0.4) * dpr,
+        a: Math.random() * 0.6 + 0.15,
+        s: Math.random() * 0.12 + 0.02,
+        h: Math.random() < 0.22 ? '180,230,255' : (Math.random() < 0.4 ? '215,190,255' : '255,255,255')
+      });
+    }
+  }
+
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function drawStars() {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    for (var i = 0; i < stars.length; i++) {
+      var st = stars[i];
+      cx.beginPath();
+      cx.fillStyle = 'rgba(' + st.h + ',' + st.a + ')';
+      cx.arc(st.x, st.y, st.r, 0, 6.2832);
+      cx.fill();
+      if (!reduce) {
+        st.y += st.s * dpr;
+        if (st.y > cv.height + 4) { st.y = -4; st.x = Math.random() * cv.width; }
+      }
+    }
+    if (!reduce) requestAnimationFrame(drawStars);
+  }
+
+  function burst(n, colors) {
+    if (reduce) return;
+    for (var i = 0; i < n; i++) {
+      (function (i) {
+        var d = document.createElement('div');
+        d.className = 'fx';
+        d.style.background = colors[i % colors.length];
+        d.style.left = (innerWidth / 2) + 'px';
+        d.style.top = (innerHeight / 2) + 'px';
+        document.body.appendChild(d);
+        var ang = Math.random() * 6.2832, dist = 90 + Math.random() * 320;
+        var dx = Math.cos(ang) * dist, dy = Math.sin(ang) * dist - 80;
+        var dur = 900 + Math.random() * 900;
+        d.animate(
+          [{ transform: 'translate(-50%,-50%) scale(1)', opacity: 1 },
+           { transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.2)', opacity: 0 }],
+          { duration: dur, easing: 'cubic-bezier(.15,.7,.3,1)' }
+        );
+        setTimeout(function () { d.remove(); }, dur + 60);
+      })(i);
+    }
+  }
+
+  var toastT = null;
+  function toast(msg) {
+    var t = $('toast');
+    t.textContent = msg; t.classList.add('on');
+    clearTimeout(toastT);
+    toastT = setTimeout(function () { t.classList.remove('on'); }, 2800);
+  }
+
+  // 归来礼包：不在的时候世界也在动（不惩罚，只给一点温柔）
+  function welcomeBack() {
+    if (!state.lastSeen) return;
+    var gap = (Date.now() - state.lastSeen) / 86400000;
+    if (gap < 6) return;
+    var d = Math.floor(gap);
+    state.stats.energy = clamp(state.stats.energy + 5);
+    save();
+    setTimeout(function () {
+      toast('你走了 ' + d + ' 天。轨道上多了几颗尘埃，精力 +5。');
+    }, 700);
+  }
+
+  /* =====================================================================
+     7. 启动
+     ===================================================================== */
+
+  window.addEventListener('resize', function () { buildStars(); }, { passive: true });
+  buildStars();
+  drawStars();
+  welcomeBack();
+  renderAll();
+  if (nearEnd()) setTimeout(function () { $('ending').scrollIntoView({ behavior: 'smooth' }); }, 500);
+})();
+</script>
+</body>
+</html>
