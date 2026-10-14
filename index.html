@@ -192,16 +192,80 @@
 
   /* ---------- toast ---------- */
   #toast{
-    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);z-index:40;
+    position:fixed;left:50%;bottom:26px;transform:translate(-50%,140%);z-index:70;
     padding:11px 18px;border-radius:12px;font-size:13px;max-width:88vw;
     background:rgba(14,17,36,.96);border:1px solid rgba(77,227,255,.42);
     box-shadow:0 18px 40px -18px rgba(0,0,0,.9);transition:transform .45s cubic-bezier(.2,.8,.2,1);
   }
   #toast.on{transform:translate(-50%,0)}
+  #toast:empty{display:none}
 
   .fx{position:fixed;width:6px;height:6px;border-radius:2px;z-index:50;pointer-events:none}
 
   footer{position:relative;z-index:2;padding:40px 20px 70px;text-align:center;font-size:11.5px;color:rgba(139,149,189,.6)}
+
+  /* ---------- 呈现模板之二：视觉小说（借自 mo 的模板体系）----------
+     同一个 currentEvent()，换一套壳。运行内核只认 [data-i] / [data-rest] 两个钩子，
+     所以两个模板共用同一套选择与存档逻辑。 */
+  .vnbtn{
+    display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;
+    padding:5px 11px;border-radius:9px;cursor:pointer;color:var(--ink);
+    background:rgba(77,227,255,.16);border:1px solid rgba(77,227,255,.42);
+    transition:background .2s,border-color .2s;
+  }
+  .vnbtn:hover{background:rgba(77,227,255,.26);border-color:rgba(77,227,255,.7)}
+  #vn{position:fixed;inset:0;z-index:60;display:none}
+  #vn.on{display:block}
+  .vn-bg{
+    position:absolute;inset:0;
+    background:
+      radial-gradient(80% 60% at 50% 8%,rgba(155,107,255,.22),transparent 70%),
+      radial-gradient(70% 60% at 50% 100%,rgba(77,227,255,.12),transparent 70%),
+      #04050c;
+  }
+  .vn-bg::after{content:"";position:absolute;inset:0;
+    background:radial-gradient(120% 90% at 50% 40%,transparent 38%,rgba(0,0,0,.78) 100%)}
+  .vn-stage{
+    position:absolute;left:0;right:0;top:0;bottom:0;
+    max-width:860px;margin:0 auto;padding:30px 24px 54px;
+    display:flex;flex-direction:column;justify-content:flex-end;gap:12px;
+  }
+  .vn-year{font-size:12px;letter-spacing:.3em;color:rgba(155,107,255,.95)}
+  .vn-body{
+    background:rgba(8,10,22,.92);border:1px solid rgba(125,139,214,.28);border-radius:14px;
+    padding:20px 22px;box-shadow:0 30px 70px -40px #000;
+  }
+  .vn-title{margin:0;font-size:clamp(19px,3.6vw,27px);font-weight:500;color:#fff;line-height:1.45}
+  .vn-text{margin:11px 0 0;font-size:15px;line-height:1.95;color:#c9d2ee;min-height:4em}
+  .vn-text .caret{display:inline-block;width:8px;height:15px;background:var(--cyan);
+    vertical-align:-2px;margin-left:2px;animation:vn-blink 1.05s steps(2,end) infinite}
+  @keyframes vn-blink{0%,100%{opacity:1}50%{opacity:.12}}
+  .vn-choices{display:grid;gap:8px}
+  .vn-choice{
+    width:100%;text-align:left;font:inherit;color:var(--ink);cursor:pointer;
+    padding:13px 16px;border-radius:11px;
+    background:rgba(233,237,255,.06);border:1px solid rgba(233,237,255,.14);
+    transition:border-color .2s,background .2s,transform .12s;
+  }
+  .vn-choice:hover{border-color:rgba(77,227,255,.6);background:rgba(77,227,255,.10);transform:translateX(3px)}
+  .vn-choice .vnk{font-size:14.5px;font-weight:500}
+  .vn-choice .vnd{font-size:12px;color:var(--dim);margin-left:8px}
+  .vn-choice .dl{display:flex;gap:9px;flex-wrap:wrap;font-size:11.5px;margin-top:4px;font-variant-numeric:tabular-nums}
+  .vn-choice.waiting{opacity:.35;pointer-events:none}
+  .vn-top{position:absolute;top:16px;right:18px;z-index:2;display:flex;gap:8px}
+  .vn-hint{position:absolute;left:0;right:0;bottom:12px;text-align:center;z-index:2;
+    font-size:10.5px;letter-spacing:.22em;color:rgba(139,149,189,.5);pointer-events:none}
+  .vn-fab{
+    position:fixed;right:20px;bottom:20px;z-index:50;
+    backdrop-filter:blur(8px);box-shadow:0 14px 36px -16px rgba(0,0,0,.95);
+  }
+  .vn-yearmark{
+    position:absolute;left:0;right:0;top:9vh;text-align:center;pointer-events:none;
+    font-size:clamp(76px,15vw,170px);font-weight:500;letter-spacing:.06em;line-height:1;
+    color:rgba(233,237,255,.055);
+  }
+  .vn-endstat{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--dim)}
+  .vn-endstat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 
   @media (max-width:720px){
     #hud .hud-in{gap:10px;padding:8px 14px}
@@ -210,6 +274,10 @@
     .inner{padding:70px 18px}
     .card{padding:18px}
     .sat-l{display:none}
+    .vnbtn{font-size:11px;padding:4px 9px}
+    .vn-stage{padding:20px 14px 34px}
+    .vn-body{padding:16px}
+    .vn-text{font-size:14px}
   }
   @media (prefers-reduced-motion:reduce){
     html{scroll-behavior:auto}
@@ -316,6 +384,27 @@
   </section>
 
   <footer>大学星轨 v1 · 单文件零依赖 · 关掉浏览器进度还在</footer>
+</div>
+
+<!-- 切"看法"的悬浮按钮：星轨 ↔ 视觉小说，永不挤到 HUD -->
+<button class="vnbtn vn-fab" type="button" id="btnVn">▶ 换一种看法</button>
+
+<!-- ============ 呈现模板之二：视觉小说（全屏舞台，点任意处推进）============ -->
+<div id="vn" role="dialog" aria-modal="true" aria-label="视觉小说模式">
+  <div class="vn-bg"></div>
+  <div class="vn-yearmark" id="vnMark" aria-hidden="true"></div>
+  <div class="vn-stage">
+    <div class="vn-year" id="vnYear"></div>
+    <div class="vn-body">
+      <h3 class="vn-title" id="vnTitle"></h3>
+      <p class="vn-text" id="vnText"></p>
+    </div>
+    <nav class="vn-choices" id="vnChoices" aria-label="选择"></nav>
+  </div>
+  <div class="vn-top">
+    <button class="vn-close" type="button" id="btnVnClose">✕ 回到星轨</button>
+  </div>
+  <div class="vn-hint" id="vnHint">点击推进 · ESC 退出</div>
 </div>
 
 <div id="toast" role="status" aria-live="polite"></div>
@@ -591,43 +680,70 @@
     }).join('');
   }
 
-  function renderLoop() {
-    var box = $('loop');
+  /* =====================================================================
+     呈现层：一份数据，多套模板
+     借自 mo（墨水）的做法 —— 内核不认识模板，模板只认 [data-i] / [data-rest]
+     两个钩子。所以「星轨」和「视觉小说」共用同一套选择、存档与结局逻辑。
+     ===================================================================== */
+
+  function sceneModel() {
     var needRest = state.stats.energy < 15 && state.forcedRestFor !== state.qi;
     var e = currentEvent();
 
-    if (!e || nearEnd()) { box.innerHTML = ''; $('loopTitle').textContent = '你走完了这条轨道'; return; }
-
+    if (state.stats.energy <= 0 || !e || nearEnd()) {
+      var end = pickEnding();
+      return {
+        kind: 'ending', year: state.lane ? state.lane + '轨' : '未分叉',
+        kicker: 'ENDING　·　' + (state.lane ? state.lane + '轨' : '未分叉'),
+        title: end.title, text: end.text, choices: []
+      };
+    }
     if (needRest) {
+      return {
+        kind: 'rest', year: '', kicker: 'FORCED REST',
+        title: '精力见底，这周你什么都做不了',
+        text: '身体先替你做了决定。休息不算浪费，只是账换了个地方记。',
+        choices: [{ i: -1, rest: true, k: '睡满整个周末', d: '精力回一部分，进度停两周', x: { energy: 26, academic: -3 } }]
+      };
+    }
+    return {
+      kind: e.branch ? 'branch' : (e.boss ? 'boss' : 'event'),
+      year: e.year,
+      kicker: e.year + '　·　' + (e.branch ? 'BRANCH' : (e.boss ? 'BOSS' : 'EVENT')),
+      title: e.title, text: e.desc,
+      choices: e.options.map(function (o, i) {
+        return { i: i, k: o.k, d: o.d, x: o.x, lane: o.lane };
+      })
+    };
+  }
+
+  function renderLoop() {
+    var box = $('loop');
+    var sc = sceneModel();
+
+    if (sc.kind === 'ending') { box.innerHTML = ''; $('loopTitle').textContent = '你走完了这条轨道'; return; }
+
+    if (sc.kind === 'rest') {
       $('loopTitle').textContent = '你撑不住了';
-      box.innerHTML =
-        '<div class="card rest">' +
-          '<div class="k">FORCED REST</div>' +
-          '<h3>精力见底，这周你什么都做不了</h3>' +
-          '<div class="desc">身体先替你做了决定。休息不算浪费，只是账换了个地方记。</div>' +
-          '<div class="opts">' +
-            '<button class="opt" type="button" data-rest="1">' +
-              '<span class="ok">睡满整个周末</span>' +
-              '<span class="od">精力回一部分，进度停两周</span>' +
-              '<span class="dl">' + deltaChips({ energy: 26, academic: -3 }) + '</span>' +
-            '</button>' +
-          '</div>' +
-        '</div>';
+      var h = '<div class="card rest"><div class="k">' + sc.kicker + '</div>' +
+        '<h3>' + sc.title + '</h3><div class="desc">' + sc.text + '</div><div class="opts">';
+      sc.choices.forEach(function (c) {
+        h += '<button class="opt" type="button" data-rest="1"><span class="ok">' + c.k + '</span>' +
+          '<span class="od">' + c.d + '</span><span class="dl">' + deltaChips(c.x) + '</span></button>';
+      });
+      box.innerHTML = h + '</div></div>';
       return;
     }
 
-    $('loopTitle').textContent = e.branch ? '这一下决定后面两年' : '现在，做决定';
-    var h = '<div class="card">' +
-      '<div class="k">' + e.year + '　·　' + (e.branch ? 'BRANCH' : (e.boss ? 'BOSS' : 'EVENT')) + '</div>' +
-      '<h3>' + e.title + '</h3>' +
-      '<div class="desc">' + e.desc + '</div><div class="opts">';
-    e.options.forEach(function (o, i) {
-      h += '<button class="opt" type="button" data-i="' + i + '"' + (o.lane ? ' data-lane="' + o.lane + '"' : '') + '>' +
-        '<span class="ok">' + o.k + (o.d ? '　<small style="color:var(--dim);font-weight:400">' + o.d + '</small>' : '') + '</span>' +
-        '<span class="dl">' + deltaChips(o.x) + '</span>' +
-      '</button>';
+    $('loopTitle').textContent = sc.kind === 'branch' ? '这一下决定后面两年' : '现在，做决定';
+    var h2 = '<div class="card"><div class="k">' + sc.kicker + '</div>' +
+      '<h3>' + sc.title + '</h3><div class="desc">' + sc.text + '</div><div class="opts">';
+    sc.choices.forEach(function (c) {
+      h2 += '<button class="opt" type="button" data-i="' + c.i + '"' + (c.lane ? ' data-lane="' + c.lane + '"' : '') + '>' +
+        '<span class="ok">' + c.k + (c.d ? '　<small style="color:var(--dim);font-weight:400">' + c.d + '</small>' : '') + '</span>' +
+        '<span class="dl">' + deltaChips(c.x) + '</span></button>';
     });
-    box.innerHTML = h + '</div></div>';
+    box.innerHTML = h2 + '</div></div>';
   }
 
   function applyChoice(e, o) {
@@ -689,12 +805,107 @@
     burst(60, ['#4de3ff', '#9b6bff', '#ffc861']);
   }
 
-  function renderAll() { renderHud(); renderMap(); renderLoop(); renderEnding(); }
+  function renderAll() {
+    renderHud(); renderMap(); renderLoop(); renderEnding();
+    if (vnIsOpen()) vnRender(true);
+  }
 
   /* =====================================================================
-     5. 交互绑定
+     5. 视觉小说模板（第二个"呈现"，和星轨共用同一份 state）
      ===================================================================== */
 
+  var vnTypeTimer = null;
+
+  function vnIsOpen() { return $('vn').classList.contains('on'); }
+
+  function vnOpen() {
+    $('vn').classList.add('on');
+    document.body.style.overflow = 'hidden';
+    vnRender(true);
+  }
+
+  function vnClose() {
+    $('vn').classList.remove('on');
+    document.body.style.overflow = '';
+    if (vnTypeTimer) { clearInterval(vnTypeTimer); vnTypeTimer = null; }
+  }
+
+  function vnShowChoices(sc) {
+    var chEl = $('vnChoices');
+    chEl.innerHTML = '';
+    if (!sc.choices || !sc.choices.length) {
+      $('vnHint').textContent = '这一章结束了 · 回到星轨看地图';
+      return;
+    }
+    sc.choices.forEach(function (c) {
+      var b = document.createElement('button');
+      b.className = 'vn-choice';
+      b.type = 'button';
+      if (c.rest) b.setAttribute('data-rest', '1');
+      else b.setAttribute('data-i', String(c.i));
+      b.innerHTML = '<span class="vnk">' + c.k + '</span>' +
+        (c.d ? '<span class="vnd">' + c.d + '</span>' : '') +
+        '<span class="dl">' + deltaChips(c.x) + '</span>';
+      chEl.appendChild(b);
+    });
+    $('vnHint').textContent = '点击推进 · ESC 退出';
+  }
+
+  function vnFinishTyping() {
+    if (!vnTypeTimer) return false;
+    clearInterval(vnTypeTimer); vnTypeTimer = null;
+    var sc = sceneModel();
+    $('vnText').textContent = sc.text;
+    vnShowChoices(sc);
+    return true;
+  }
+
+  function vnRender(animate) {
+    var sc = sceneModel();
+    $('vnYear').textContent = sc.kind === 'ending' ? sc.kicker : sc.year;
+    $('vnTitle').textContent = sc.title;
+    $('vnMark').textContent = sc.kind === 'ending' ? '结局' : String(sc.year || '').split(/[\s·]/)[0];
+    $('vnChoices').innerHTML = '';
+    if (vnTypeTimer) { clearInterval(vnTypeTimer); vnTypeTimer = null; }
+
+    if (sc.kind === 'ending') {
+      $('vnText').innerHTML = sc.text + '<div class="vn-endstat">' +
+        KEYS.map(function (k) { return '<span>' + LABEL[k] + ' <b>' + clamp(state.stats[k]) + '</b></span>'; }).join('') +
+        '<span>走过节点 <b>' + state.log.length + '</b></span></div>';
+      var again = document.createElement('button');
+      again.className = 'vn-choice'; again.type = 'button'; again.setAttribute('data-again', '1');
+      again.innerHTML = '<span class="vnk">换一条轨道重来</span>';
+      $('vnChoices').appendChild(again);
+      $('vnHint').textContent = '这条轨道走完了';
+      return;
+    }
+
+    var reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (animate === false || reduce) {
+      $('vnText').textContent = sc.text;
+      vnShowChoices(sc);
+      return;
+    }
+
+    var full = sc.text, n = 0;
+    var span = document.createElement('span');
+    var caret = document.createElement('span');
+    caret.className = 'caret';
+    $('vnText').innerHTML = '';
+    $('vnText').appendChild(span);
+    $('vnText').appendChild(caret);
+    vnTypeTimer = setInterval(function () {
+      n += 2;
+      span.textContent = full.slice(0, n);
+      if (n >= full.length) vnFinishTyping();
+    }, 34);
+  }
+
+  /* =====================================================================
+     6. 交互绑定
+     ===================================================================== */
+
+  // 星轨模板的选择
   $('loop').addEventListener('click', function (ev) {
     var b = ev.target.closest ? ev.target.closest('button') : null;
     if (!b) return;
@@ -703,6 +914,27 @@
     var e = currentEvent();
     if (!e || !e.options[i]) return;
     applyChoice(e, e.options[i]);
+  });
+
+  // 视觉小说模板的选择（同一个内核，不同钩子来源）
+  $('vn').addEventListener('click', function (ev) {
+    var b = ev.target.closest ? ev.target.closest('button') : null;
+    if (!b) { vnFinishTyping(); return; }
+    if (b.id === 'btnVnClose') { vnClose(); return; }
+    if (b.hasAttribute('data-again')) { doReset(); return; }
+    if (b.hasAttribute('data-rest')) { rest(); return; }
+    if (b.hasAttribute('data-i')) {
+      var i = parseInt(b.getAttribute('data-i'), 10);
+      var e = currentEvent();
+      if (e && e.options[i]) applyChoice(e, e.options[i]);
+      return;
+    }
+    vnFinishTyping();
+  });
+
+  $('btnVn').addEventListener('click', vnOpen);
+  document.addEventListener('keydown', function (ev) {
+    if (ev.key === 'Escape' && vnIsOpen()) vnClose();
   });
 
   function doExport() {
