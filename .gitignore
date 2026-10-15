@@ -9,3 +9,8 @@ __pycache__/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# 本地运行时生成（含口令/会话/发布备份），不入库
+admin_config.json
+.sessions.json
+backups/
