@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>大学星轨 · College Orbit</title>
+<title>我的大学抉择 · 大学生活模拟</title>
 <style>
   :root{
     --bg:#05060f;
@@ -16,6 +16,7 @@
     --pink:#ff6bcb;
     --amber:#ffc861;
     --green:#5cf0b0;
+    --red:#ff6b6b;
     --total:1461; /* 4 年 */
   }
   *{box-sizing:border-box}
@@ -45,19 +46,26 @@
   }
   #hud .hud-in{
     max-width:1080px;margin:0 auto;padding:9px 20px;
-    display:flex;align-items:center;gap:18px;flex-wrap:wrap;
+    display:flex;align-items:center;gap:16px;flex-wrap:wrap;
   }
-  .who{display:flex;align-items:baseline;gap:9px;margin-right:auto}
+  .who{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
   .who b{font-weight:500;letter-spacing:.05em}
   .who span{font-size:12px;color:var(--dim)}
-  .stat{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
-  .stat .track{display:block;width:74px;height:5px;border-radius:99px;background:rgba(233,237,255,.10);overflow:hidden}
+  .who .days{font-size:12px;color:var(--dim)}
+  .statrow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-left:auto;justify-content:flex-end}
+  .stat{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--dim)}
+  .stat .track{display:block;width:48px;height:5px;border-radius:99px;background:rgba(233,237,255,.10);overflow:hidden}
   .stat .fill{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--violet),var(--cyan));transition:width .55s cubic-bezier(.2,.7,.2,1)}
-  .stat .v{font-variant-numeric:tabular-nums;color:var(--ink);min-width:22px;text-align:right}
+  .stat .v{font-variant-numeric:tabular-nums;color:var(--ink);min-width:26px;text-align:right}
+  .stat[data-k="gpa"] .fill{background:linear-gradient(90deg,var(--violet),var(--cyan))}
   .stat[data-k="social"] .fill{background:linear-gradient(90deg,var(--pink),var(--amber))}
+  .stat[data-k="mind"] .fill{background:linear-gradient(90deg,#ff6bcb,#9b6bff)}
+  .stat[data-k="resource"] .fill{background:linear-gradient(90deg,#ffc861,#5cf0b0)}
   .stat[data-k="money"] .fill{background:linear-gradient(90deg,var(--green),var(--cyan))}
-  .stat[data-k="energy"] .fill{background:linear-gradient(90deg,var(--amber),var(--pink))}
-  .days{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .stat[data-k="skill"] .fill{background:linear-gradient(90deg,var(--cyan),var(--violet))}
+  .stat[data-k="body"] .fill{background:linear-gradient(90deg,#5cf0b0,#ffc861)}
+  .stat[data-k="fame"] .fill{background:linear-gradient(90deg,#ffc861,#ff6bcb)}
+  .days{font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums;white-space:nowrap}
   .days b{color:var(--cyan);font-weight:500}
 
   /* ---------- hero ---------- */
@@ -71,12 +79,12 @@
   .orbit{position:absolute;inset:0;animation:spin 180s linear infinite}
   .orbit i{position:absolute;inset:0;border-radius:50%;border:1px dashed rgba(77,227,255,.22)}
   .orbit i:nth-child(2){inset:11%;border:1px solid rgba(155,107,255,.20);transform:rotate(-16deg) scaleY(.42)}
-  .sat{position:absolute;top:50%;left:50%;width:7px;height:7px;border-radius:50%;
+  .sat{position:absolute;top:50%;left:50%;width:6px;height:6px;border-radius:50%;
     background:var(--c,var(--cyan));box-shadow:0 0 10px 2px color-mix(in srgb,var(--c,var(--cyan)) 60%,transparent);
     transform:translate(-50%,-50%) rotate(var(--a)) translateX(calc(var(--R) - 7px))}
   .labels{position:absolute;inset:0;pointer-events:none}
-  .sat-l{position:absolute;top:50%;left:50%;font-size:11px;letter-spacing:.1em;color:var(--dim);white-space:nowrap;
-    transform:translate(-50%,-50%) rotate(var(--a)) translateX(calc(var(--R) + 13px)) rotate(calc(-1 * var(--a)))}
+  .sat-l{position:absolute;top:50%;left:50%;font-size:11px;letter-spacing:.08em;color:var(--dim);white-space:nowrap;
+    transform:translate(-50%,-50%) rotate(var(--a)) translateX(calc(var(--R) + 15px)) rotate(calc(-1 * var(--a)))}
   @keyframes spin{to{transform:rotate(360deg)}}
   #planet{
     position:relative;width:min(196px,40vw);aspect-ratio:1;border-radius:50%;
@@ -107,15 +115,15 @@
     width:132px;padding:12px 10px;border-radius:12px;font-size:12px;color:var(--dim);
     background:rgba(14,17,36,.6);border:1px dashed rgba(125,139,214,.28);
   }
-  .peek strong{display:block;font-weight:500;font-size:15px;color:var(--ink);letter-spacing:.34em;margin-bottom:5px}
+  .peek strong{display:block;font-weight:500;font-size:15px;color:var(--ink);letter-spacing:.06em;margin-bottom:5px}
 
   /* ---------- 通用 section ---------- */
   .inner{max-width:1080px;margin:0 auto;padding:96px 20px}
   h2.sec{margin:0;font-size:13px;font-weight:500;letter-spacing:.24em;color:var(--dim)}
   h2.sec + .sec-t{margin:8px 0 30px;font-size:clamp(20px,3vw,28px);font-weight:500}
 
-  /* ---------- 轨道地图 ---------- */
-  .map{display:grid;grid-template-columns:1fr;gap:2px;max-width:620px}
+  /* ---------- 阶段地图 ---------- */
+  .map{display:grid;grid-template-columns:1fr;gap:2px;max-width:680px}
   .yr{position:relative;padding:0 0 22px 26px}
   .yr::before{content:"";position:absolute;left:5px;top:8px;bottom:-4px;width:1px;background:rgba(233,237,255,.16)}
   .yr:last-child::before{display:none}
@@ -125,13 +133,14 @@
   .yr[data-s="lock"]::after{border-style:dashed}
   .yr .yk{font-size:15px;font-weight:500}
   .yr .ys{font-size:12.5px;color:var(--dim);margin-top:2px}
+  .yr .yn{font-size:11.5px;color:rgba(139,149,189,.8);margin-top:3px;font-variant-numeric:tabular-nums}
   .lanes{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}
   .lane{font-size:11px;padding:3px 10px;border-radius:99px;color:var(--dim);border:1px dashed rgba(233,237,255,.22)}
   .lane[data-p="1"]{color:var(--ink);border-style:solid;border-color:transparent;background:rgba(77,227,255,.24)}
 
   /* ---------- 事件卡 ---------- */
   .card{
-    max-width:700px;border-radius:16px;padding:24px;
+    max-width:720px;border-radius:16px;padding:24px;
     background:var(--panel);border:1px solid rgba(155,107,255,.32);
     box-shadow:0 0 60px -34px rgba(155,107,255,.95);
   }
@@ -148,28 +157,37 @@
   .opt .ok{font-size:14.5px;font-weight:500}
   .opt .od{font-size:12px;color:var(--dim)}
   .opt .dl{display:flex;gap:9px;flex-wrap:wrap;font-size:11.5px;font-variant-numeric:tabular-nums;margin-top:2px}
+  .opt[disabled]{opacity:.42;cursor:not-allowed}
+  .opt[disabled]:hover{border-color:rgba(233,237,255,.10);transform:none}
+  .opt .req{font-size:11.5px;color:var(--amber)}
   .up{color:var(--green)}.dn{color:var(--pink)}
   .rest{border-color:rgba(255,200,97,.45)}
   .rest .k{color:var(--amber)}
+  .card.side{border-color:rgba(255,107,107,.42)}
+  .card.side .k{color:var(--red)}
+  .card.settle{border-color:rgba(255,200,97,.42)}
+  .card.settle .k{color:var(--amber)}
 
   /* 结果条 */
-  #outcome{max-width:700px;margin-top:14px;font-size:13.5px;color:var(--dim);min-height:26px}
+  #outcome{max-width:720px;margin-top:14px;font-size:13.5px;color:var(--dim);min-height:26px}
   #outcome b{color:var(--ink);font-weight:500}
 
   /* ---------- 结局 ---------- */
   #ending{display:none}
   #ending.on{display:block}
   .end{
-    max-width:760px;border-radius:18px;padding:32px;
+    max-width:820px;border-radius:18px;padding:32px;
     background:linear-gradient(150deg,rgba(155,107,255,.16),rgba(14,17,36,.86) 55%);
     border:1px solid rgba(77,227,255,.30);
   }
   .end .k{font-size:11px;letter-spacing:.24em;color:var(--cyan)}
+  .end .tier{display:inline-block;margin-top:12px;font-size:11.5px;padding:3px 11px;border-radius:99px;
+    background:rgba(255,200,97,.16);border:1px solid rgba(255,200,97,.42);color:var(--amber)}
   .end h3{margin:10px 0 0;font-size:clamp(24px,4vw,34px);font-weight:500}
   .end p{margin:14px 0 0;color:var(--dim);max-width:56ch}
-  .end .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin-top:24px}
-  .end .grid div{padding:12px;border-radius:11px;background:rgba(233,237,255,.05);font-size:12px;color:var(--dim)}
-  .end .grid b{display:block;font-size:21px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
+  .end .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:10px;margin-top:24px}
+  .end .grid div{padding:11px;border-radius:11px;background:rgba(233,237,255,.05);font-size:12px;color:var(--dim)}
+  .end .grid b{display:block;font-size:20px;font-weight:500;color:var(--ink);font-variant-numeric:tabular-nums}
   .end .log{margin-top:24px;font-size:12.5px;color:var(--dim);max-height:190px;overflow:auto;padding-right:6px}
   .end .log p{margin:0 0 9px;color:var(--dim)}
   .end .log span{color:var(--cyan)}
@@ -184,7 +202,7 @@
   button.b:hover{border-color:rgba(77,227,255,.6);background:rgba(77,227,255,.10)}
   button.b.p{background:rgba(77,227,255,.20);border-color:transparent}
   textarea.code{
-    width:100%;max-width:700px;height:74px;margin-top:12px;padding:10px;border-radius:10px;resize:vertical;
+    width:100%;max-width:720px;height:74px;margin-top:12px;padding:10px;border-radius:10px;resize:vertical;
     font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--ink);
     background:rgba(0,0,0,.36);border:1px solid var(--line);
   }
@@ -205,7 +223,7 @@
   footer{position:relative;z-index:2;padding:40px 20px 70px;text-align:center;font-size:11.5px;color:rgba(139,149,189,.6)}
 
   /* ---------- 呈现模板之二：视觉小说（借自 mo 的模板体系）----------
-     同一个 currentEvent()，换一套壳。运行内核只认 [data-i] / [data-rest] 两个钩子，
+     同一个 sceneModel()，换一套壳。运行内核只认 [data-i] / [data-rest] 两个钩子，
      所以两个模板共用同一套选择与存档逻辑。 */
   .vnbtn{
     display:inline-flex;align-items:center;gap:6px;font:inherit;font-size:12px;
@@ -227,7 +245,7 @@
     background:radial-gradient(120% 90% at 50% 40%,transparent 38%,rgba(0,0,0,.78) 100%)}
   .vn-stage{
     position:absolute;left:0;right:0;top:0;bottom:0;
-    max-width:860px;margin:0 auto;padding:30px 24px 54px;
+    max-width:880px;margin:0 auto;padding:30px 24px 54px;
     display:flex;flex-direction:column;justify-content:flex-end;gap:12px;
   }
   .vn-year{font-size:12px;letter-spacing:.3em;color:rgba(155,107,255,.95)}
@@ -240,7 +258,7 @@
   .vn-text .caret{display:inline-block;width:8px;height:15px;background:var(--cyan);
     vertical-align:-2px;margin-left:2px;animation:vn-blink 1.05s steps(2,end) infinite}
   @keyframes vn-blink{0%,100%{opacity:1}50%{opacity:.12}}
-  .vn-choices{display:grid;gap:8px}
+  .vn-choices{display:grid;gap:8px;max-height:44vh;overflow:auto;padding-right:4px}
   .vn-choice{
     width:100%;text-align:left;font:inherit;color:var(--ink);cursor:pointer;
     padding:13px 16px;border-radius:11px;
@@ -251,7 +269,9 @@
   .vn-choice .vnk{font-size:14.5px;font-weight:500}
   .vn-choice .vnd{font-size:12px;color:var(--dim);margin-left:8px}
   .vn-choice .dl{display:flex;gap:9px;flex-wrap:wrap;font-size:11.5px;margin-top:4px;font-variant-numeric:tabular-nums}
-  .vn-choice.waiting{opacity:.35;pointer-events:none}
+  .vn-choice .req{display:block;font-size:11.5px;color:var(--amber);margin-top:4px}
+  .vn-choice[disabled]{opacity:.42;cursor:not-allowed}
+  .vn-choice[disabled]:hover{border-color:rgba(233,237,255,.14);background:rgba(233,237,255,.06);transform:none}
   .vn-top{position:absolute;top:16px;right:18px;z-index:2;display:flex;gap:8px}
   .vn-hint{position:absolute;left:0;right:0;bottom:12px;text-align:center;z-index:2;
     font-size:10.5px;letter-spacing:.22em;color:rgba(139,149,189,.5);pointer-events:none}
@@ -261,16 +281,17 @@
   }
   .vn-yearmark{
     position:absolute;left:0;right:0;top:9vh;text-align:center;pointer-events:none;
-    font-size:clamp(76px,15vw,170px);font-weight:500;letter-spacing:.06em;line-height:1;
+    font-size:clamp(64px,12vw,140px);font-weight:500;letter-spacing:.06em;line-height:1;
     color:rgba(233,237,255,.055);
   }
-  .vn-endstat{display:flex;gap:16px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--dim)}
+  .vn-endstat{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px;font-size:12px;color:var(--dim)}
   .vn-endstat b{color:var(--ink);font-weight:500;font-variant-numeric:tabular-nums}
 
   @media (max-width:720px){
-    #hud .hud-in{gap:10px;padding:8px 14px}
+    #hud .hud-in{gap:8px;padding:8px 14px}
     .who span{display:none}
-    .stat .track{width:46px}
+    .statrow{gap:10px}
+    .stat .track{width:40px}
     .inner{padding:70px 18px}
     .card{padding:18px}
     .sat-l{display:none}
@@ -294,57 +315,43 @@
 
   <header id="hud">
     <div class="hud-in">
-      <div class="who"><b>大学星轨</b><span id="whoSub">2024 级 · 软件工程</span></div>
-      <div class="stat" data-k="academic"><span>学术</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
-      <div class="stat" data-k="social"><span>社交</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
-      <div class="stat" data-k="money"><span>搞钱</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
-      <div class="stat" data-k="energy"><span>精力</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>
-      <div class="days">还有 <b id="daysLeft">1461</b> 天毕业</div>
+      <div class="who">
+        <b id="whoTitle">我的大学抉择</b><span id="whoSub">大学生活模拟</span>
+        <span class="days">还有 <b id="daysLeft">1461</b> 天毕业</span>
+      </div>
+      <div class="statrow" id="hudStats"></div>
     </div>
   </header>
 
-  <!-- ============ 星轨门面 ============ -->
+  <!-- ============ 门面 ============ -->
   <section id="hero">
     <div style="position:relative;display:grid;place-items:center">
       <div class="halo"></div>
       <div class="sys">
         <div class="orbit">
           <i></i><i></i>
-          <span class="sat" style="--a:24deg;--c:#4de3ff"></span>
-          <span class="sat" style="--a:120deg;--c:#9b6bff"></span>
-          <span class="sat" style="--a:212deg;--c:#ffc861"></span>
-          <span class="sat" style="--a:302deg;--c:#5cf0b0"></span>
         </div>
-        <div class="labels">
-          <span class="sat-l" style="--a:24deg">英语</span>
-          <span class="sat-l" style="--a:120deg">社团</span>
-          <span class="sat-l" style="--a:212deg">绩点</span>
-          <span class="sat-l" style="--a:302deg">存款</span>
-        </div>
+        <div class="labels" id="satLabels"></div>
         <div id="planet"></div>
       </div>
 
       <div class="hero-copy">
-        <div class="k">衡阳 → 某大学 → 2027 届</div>
+        <div class="k" id="heroTag">军训 → 毕业 · 20 个关键事件 · 5 个学院</div>
         <h1>你还有 <em id="heroDays">1461</em> 天毕业</h1>
         <div class="chips" id="chips"></div>
       </div>
 
-      <div class="peek">
-        <div><strong>上岸</strong>迷雾中</div>
-        <div><strong>Offer</strong>迷雾中</div>
-        <div><strong>延毕</strong>迷雾中</div>
-      </div>
+      <div class="peek" id="peek"></div>
 
       <div class="hint">向下滚动 ↓</div>
     </div>
   </section>
 
-  <!-- ============ 轨道地图 ============ -->
+  <!-- ============ 阶段地图 ============ -->
   <section id="mapSec">
     <div class="inner">
-      <h2 class="sec">ORBIT MAP</h2>
-      <div class="sec-t">你的大学只有四个节点，但只有一次分叉</div>
+      <h2 class="sec">STAGE MAP</h2>
+      <div class="sec-t">五个阶段，一次不可逆的分叉：没有完美选择，每个选项都有得有失</div>
       <div class="map" id="map"></div>
     </div>
   </section>
@@ -374,16 +381,16 @@
       <h2 class="sec">SAVE</h2>
       <div class="sec-t">数据存在这台设备的浏览器里，换设备就带走这串码</div>
       <div class="row">
-        <button class="b p" type="button" id="btnExport">导出星轨码</button>
+        <button class="b p" type="button" id="btnExport">导出存档码</button>
         <button class="b" type="button" id="btnImport">导入</button>
         <button class="b" type="button" id="btnReset">重新开始</button>
       </div>
-      <textarea class="code" id="codeBox" spellcheck="false" aria-label="星轨码" placeholder="点「导出星轨码」生成；或把之前存下的码粘到这里，再点「导入」。"></textarea>
+      <textarea class="code" id="codeBox" spellcheck="false" aria-label="存档码" placeholder="点「导出存档码」生成；或把之前存下的码粘到这里，再点「导入」。"></textarea>
       <div class="note" id="saveNote"></div>
     </div>
   </section>
 
-  <footer>大学星轨 v1 · 单文件零依赖 · 关掉浏览器进度还在</footer>
+  <footer id="footNote">我的大学抉择 · 单文件零依赖 · 关掉浏览器进度还在</footer>
 </div>
 
 <!-- 切"看法"的悬浮按钮：星轨 ↔ 视觉小说，永不挤到 HUD -->
@@ -419,7 +426,8 @@
 
   /* =====================================================================
      1. 数据层 —— 默认剧本 + 创作台发布的内容（data.js 优先）
-        结构：meta / lanes / events / endings / allround
+        结构：meta / lanes / events / pool / triggers / endings
+        meta.keys 决定有几维数值，别处一律不认识具体属性名。
      ===================================================================== */
 
   function clone(o) { return JSON.parse(JSON.stringify(o)); }
@@ -428,79 +436,130 @@
     ? window.GAME_DATA
     : window.GAME_DEFAULT;
 
-  var KEYS = DATA.meta.keys;
-  var LABEL = DATA.meta.label;
-  var LANES = DATA.lanes;
-  var TOTAL_DAYS = DATA.meta.totalDays;
+  var META = DATA.meta || {};
+  var KEYS = (META.keys && META.keys.length) ? META.keys : ['gpa', 'social', 'mind', 'resource', 'money', 'skill', 'body', 'fame'];
+  var LABEL = META.label || { gpa: '学业', social: '人际', mind: '心态', resource: '资源', money: '金钱', skill: '技能', body: '体魄', fame: '声望' };
+  var MAX = META.max || {};
+  var LANES = DATA.lanes || [];
+  var TOTAL_DAYS = META.totalDays || 1461;
+  var POOL_RATE = (typeof META.poolRate === 'number') ? META.poolRate : 0.45;
+  var PEEK = META.peek || [];
+  var STAGES = (META.stages && META.stages.length) ? META.stages : [
+    { k: '阶段一', s: '' }, { k: '阶段二', s: '' }, { k: '阶段三', s: '' },
+    { k: '阶段四', s: '', lanes: true }, { k: '阶段五', s: '' }
+  ];
 
-  var FRESH = {
-    stats: clone(DATA.meta.fresh.stats),
-    qi: 0,                 // 在队列里的位置
-    lane: null,            // 大三分叉点选中的轨道
-    day: 0,                // 已经过去的天
-    log: [],               // 做过的事
-    forcedRestFor: -1,     // 精力见底时插入的休息卡，避免重复触发
-    lastSeen: 0
-  };
+  var EVENTS = DATA.events || [];
+  var POOL = DATA.pool || [];
+  var TRIGGERS = DATA.triggers || [];
+  var BY_ID = {};
+  EVENTS.concat(POOL).forEach(function (e) { if (e && e.id) BY_ID[e.id] = e; });
 
-  /* 结局判定：when 表达式编译成函数，如 "学术>=78" "社交>=70&&学术>=60" */
-  var KEYMAP = {
-    '学术': 'academic', '社交': 'social', '搞钱': 'money', '精力': 'energy',
-    'academic': 'academic', 'social': 'social', 'money': 'money', 'energy': 'energy'
-  };
+  function maxOf(k) { return (typeof MAX[k] === 'number') ? MAX[k] : 100; }
 
+  /* 中文名 / 英文 key -> 数据 key（条件表达式与脑图文本都用得上）
+     注意：必须排在 ENDINGS 之前 —— 编译 when 表达式时就要用它。 */
+  var KEYMAP = {};
+  KEYS.forEach(function (k) { KEYMAP[k] = k; if (LABEL[k]) KEYMAP[LABEL[k]] = k; });
+  [['学业', 'gpa'], ['GPA', 'gpa'], ['绩点', 'gpa'], ['人际', 'social'], ['社交', 'social'],
+   ['心态', 'mind'], ['心理', 'mind'], ['资源', 'resource'], ['机会', 'resource'],
+   ['金钱', 'money'], ['钱', 'money'], ['技能', 'skill'], ['体魄', 'body'], ['身体', 'body'],
+   ['声望', 'fame'], ['影响力', 'fame']].forEach(function (p) {
+    if (KEYMAP[p[0]] === undefined) KEYMAP[p[0]] = p[1];
+  });
+
+  var ENDINGS = (DATA.endings || []).map(function (e) {
+    return { tier: e.tier || '', title: e.title, text: e.text, test: compileWhen(e.when) };
+  });
+
+  /* 条件表达式："学业>90&&资源>70&&flag:paper" / "min>=40" / "lane=考研/保研" */
   function compileWhen(expr) {
-    if (!expr) return function () { return true; };
-    var parts = String(expr).split('&&').map(function (p) { return p.trim(); }).filter(Boolean)
-      .map(function (p) {
-        var m = p.match(/^(.+?)\s*(>=|<=|>|<)\s*(\d+)$/);
-        if (!m) return null;
+    var text = String(expr == null ? '' : expr).trim();
+    if (!text) return function () { return true; };
+    var checks = [];
+    text.split('&&').forEach(function (raw) {
+      var p = raw.trim(), m;
+      if (!p) return;
+      if ((m = p.match(/^min\s*(>=|>)\s*(\d+)$/))) { checks.push({ t: 'min', v: parseInt(m[2], 10) }); return; }
+      if ((m = p.match(/^!flag[:：](.+)$/))) { checks.push({ t: 'noflag', k: m[1].trim() }); return; }
+      if ((m = p.match(/^flag[:：](.+)$/))) { checks.push({ t: 'flag', k: m[1].trim() }); return; }
+      if ((m = p.match(/^lane\s*=\s*(.+)$/))) { checks.push({ t: 'lane', v: m[1].trim() }); return; }
+      if ((m = p.match(/^(.+?)\s*(>=|<=|>|<)\s*(\d+)$/))) {
         var k = KEYMAP[m[1].trim()];
-        if (!k) return null;
-        return { k: k, op: m[2], v: parseInt(m[3], 10) };
-      });
-    if (!parts.length || parts.some(function (p) { return !p; })) return function () { return true; };
-    return function (s) {
-      return parts.every(function (p) {
-        var v = s[p.k];
-        if (p.op === '>=') return v >= p.v;
-        if (p.op === '>') return v > p.v;
-        if (p.op === '<=') return v <= p.v;
-        if (p.op === '<') return v < p.v;
-        return true;
+        if (k) checks.push({ t: 'num', k: k, op: m[2], v: parseInt(m[3], 10) });
+        return;
+      }
+    });
+    if (!checks.length) return function () { return true; };
+    return function (s, st) {
+      return checks.every(function (c) {
+        if (c.t === 'min') return KEYS.every(function (k) { return Math.round(s[k]) >= c.v; });
+        if (c.t === 'flag') return st.flags.indexOf(c.k) >= 0;
+        if (c.t === 'noflag') return st.flags.indexOf(c.k) < 0;
+        if (c.t === 'lane') return st.lane === c.v;
+        var v = Math.round(s[c.k]);
+        if (c.op === '>=') return v >= c.v;
+        if (c.op === '>') return v > c.v;
+        if (c.op === '<=') return v <= c.v;
+        return v < c.v;
       });
     };
   }
-
-  var EVENTS = DATA.events;
-
-  var ENDINGS = (DATA.endings || []).map(function (e) {
-    return { lane: e.lane, title: e.title, text: e.text, test: compileWhen(e.when) };
-  });
-
-  var ALLROUND = DATA.allround || { title: '平凡的四年', text: '没有大起大落，你按自己的节奏走完了这四年。' };
 
   /* =====================================================================
      2. 状态读写
      ===================================================================== */
 
-  var SKEY = 'college-orbit-v1';
+  var SKEY = 'college-choices-v1';
+
+  var FRESH = {
+    stats: {},
+    college: null,          // 学院
+    lane: null,             // 大三分叉选中的路线
+    qi: 0,                  // 在队列里的位置
+    day: 0,                 // 已经过去的天
+    log: [],                // 做过的事
+    flags: [],              // 剧情标志（flag:xxx 条件用）
+    fired: [],              // 已经触发过的特殊事件
+    queue: [],              // 主线 + 随机事件池排成的顺序（只生成一次）
+    lastSeen: 0
+  };
+  (function () {
+    var fresh = (META.fresh && META.fresh.stats) || {};
+    KEYS.forEach(function (k) { FRESH.stats[k] = (typeof fresh[k] === 'number') ? fresh[k] : 0; });
+  })();
+
   var state = load();
+
+  function sameKeys(src, dst) {
+    KEYS.forEach(function (k) { if (src && typeof src[k] === 'number') dst[k] = clampKey(k, src[k]); });
+  }
 
   function load() {
     try {
       var raw = localStorage.getItem(SKEY);
-      if (!raw) return clone(FRESH);
+      if (!raw) return freshState();
       var p = JSON.parse(raw);
-      var s = clone(FRESH);
-      if (p && typeof p === 'object') {
-        if (p.stats) KEYS.forEach(function (k) { if (typeof p.stats[k] === 'number') s.stats[k] = p.stats[k]; });
-        ['qi', 'day', 'forcedRestFor', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
-        if (typeof p.lane === 'string' && LANES.indexOf(p.lane) >= 0) s.lane = p.lane;
-        if (Array.isArray(p.log)) s.log = p.log.slice(-40);
-      }
+      if (!p || typeof p !== 'object' || !p.stats) return freshState();
+      var s = freshState();
+      sameKeys(p.stats, s.stats);
+      ['qi', 'day', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
+      if (typeof p.college === 'string') s.college = p.college;
+      if (typeof p.lane === 'string' && LANES.indexOf(p.lane) >= 0) s.lane = p.lane;
+      if (Array.isArray(p.log)) s.log = p.log.slice(-60);
+      if (Array.isArray(p.flags)) s.flags = p.flags.slice(0, 40);
+      if (Array.isArray(p.fired)) s.fired = p.fired.slice(0, 20);
+      if (Array.isArray(p.queue) && p.queue.length) s.queue = p.queue.filter(function (id) { return BY_ID[id]; });
+      if (!s.queue.length) s.queue = buildQueue();
+      if (s.qi > s.queue.length) s.qi = s.queue.length;
       return s;
-    } catch (e) { return clone(FRESH); }
+    } catch (e) { return freshState(); }
+  }
+
+  function freshState() {
+    var s = clone(FRESH);
+    s.queue = buildQueue();
+    return s;
   }
 
   function save() {
@@ -508,29 +567,93 @@
     try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {}
   }
 
-  function clamp(v) { return Math.max(0, Math.min(100, Math.round(v))); }
+  function clampKey(k, v) { return Math.max(0, Math.min(maxOf(k), Math.round(v))); }
+  function addStat(k, v) { state.stats[k] = clampKey(k, state.stats[k] + v); }
+  function setStat(k, v) { state.stats[k] = clampKey(k, v); }
   function daysLeft() { return Math.max(0, TOTAL_DAYS - state.day); }
 
-  /* =====================================================================
-     3. 队列 —— 事件表怎么变成一条能走的线
-     ===================================================================== */
-
-  function queue() {
+  /* 队列：主线按数据顺序，插入随机事件池；只生成一次并写进存档 */
+  function buildQueue() {
     var q = [];
-    for (var i = 0; i < EVENTS.length; i++) {
-      var e = EVENTS[i];
-      if (e.onlyLane && e.onlyLane !== state.lane) continue;
-      q.push(e);
-    }
+    EVENTS.forEach(function (e) {
+      q.push(e.id);
+      if (POOL.length && Math.random() < POOL_RATE) {
+        var left = POOL.filter(function (p) { return q.indexOf(p.id) < 0; });
+        if (left.length) q.push(left[Math.floor(Math.random() * left.length)].id);
+      }
+    });
     return q;
   }
 
-  function currentEvent() {
-    var q = queue();
-    return q[Math.min(state.qi, q.length - 1)];
+  /* =====================================================================
+     3. 队列推进 —— 只Lane/只学院/条件不满足的事件直接跳过
+     ===================================================================== */
+
+  function matched(e) {
+    if (!e) return false;
+    if (e.onlyLane && e.onlyLane !== state.lane) return false;
+    if (e.onlyCollege && e.onlyCollege !== state.college) return false;
+    if (e.when && !compileWhen(e.when)(state.stats, state)) return false;
+    return true;
   }
 
-  function nearEnd() { return state.qi >= queue().length; }
+  function scan(from) {
+    for (var i = from; i < state.queue.length; i++) if (matched(BY_ID[state.queue[i]])) return i;
+    return -1;
+  }
+  function curIndex() { return scan(state.qi); }
+  function currentEvent() { var i = curIndex(); return i < 0 ? null : BY_ID[state.queue[i]]; }
+
+  function progress() {
+    var total = 0, done = 0;
+    for (var i = 0; i < state.queue.length; i++) {
+      if (!matched(BY_ID[state.queue[i]])) continue;
+      total++;
+      if (i < state.qi) done++;
+    }
+    return { done: done, total: total };
+  }
+
+  /* 特殊事件：数值触底时打断主线（心理危机 / 生病住院 / 省钱模式 / 焦虑失眠） */
+  function pendingTrigger() {
+    for (var i = 0; i < TRIGGERS.length; i++) {
+      var t = TRIGGERS[i];
+      if (state.fired.indexOf(t.id) >= 0) continue;
+      if (t.when && !compileWhen(t.when)(state.stats, state)) continue;
+      return t;
+    }
+    return null;
+  }
+
+  /* 选项门槛：need（下限）/ cap（上限）/ needAny（任一条）/ fallback（兜底，只在其它条件项都不可选时可选） */
+  function hasReq(o) { return !!(o.need || o.cap || o.needAny); }
+  function reqOk(o) {
+    var k;
+    if (o.need) for (k in o.need) if (state.stats[k] < o.need[k]) return false;
+    if (o.cap) for (k in o.cap) if (state.stats[k] >= o.cap[k]) return false;
+    if (o.needAny) {
+      var any = false;
+      for (k in o.needAny) if (state.stats[k] >= o.needAny[k]) any = true;
+      if (!any) return false;
+    }
+    return true;
+  }
+  function optOpen(e, o) {
+    if (!reqOk(o)) return false;
+    if (o.fallback) {
+      var others = (e.options || []).filter(function (x) { return x !== o && hasReq(x); });
+      if (others.some(function (x) { return reqOk(x); })) return false;
+    }
+    return true;
+  }
+  function reqText(o) {
+    var parts = [];
+    // need 存的是「至少 N」（含），按作者习惯写回 > N-1；cap 存的是「小于 N」，直接写 < N
+    if (o.need) Object.keys(o.need).forEach(function (k) { parts.push(LABEL[k] + '>' + (o.need[k] - 1)); });
+    if (o.cap) Object.keys(o.cap).forEach(function (k) { parts.push(LABEL[k] + '<' + o.cap[k]); });
+    if (o.needAny) parts.push(Object.keys(o.needAny).map(function (k) { return LABEL[k] + '>' + (o.needAny[k] - 1); }).join(' 或 '));
+    return parts.length ? ('需要 ' + parts.join('　')) : '';
+  }
 
   /* =====================================================================
      4. 表现层
@@ -538,22 +661,65 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  function renderHero() {
+    $('whoTitle').textContent = META.title || '我的大学抉择';
+    document.title = META.title || '我的大学抉择';
+    $('heroTag').textContent = META.tagline || '';
+    $('footNote').textContent = (META.title || '我的大学抉择') + ' · 单文件零依赖 · 关掉浏览器进度还在';
+
+    // 8 个数值绕着星球转
+    var colors = ['#4de3ff', '#ff6bcb', '#9b6bff', '#ffc861', '#5cf0b0', '#4de3ff', '#5cf0b0', '#ffc861'];
+    var orbit = document.querySelector('.orbit');
+    var labels = $('satLabels');
+    labels.innerHTML = '';
+    orbit.querySelectorAll('.sat').forEach(function (n) { n.remove(); });
+    KEYS.forEach(function (k, i) {
+      var a = Math.round(i * (360 / KEYS.length)) + 'deg';
+      var c = colors[i % colors.length];
+      var sat = document.createElement('span');
+      sat.className = 'sat'; sat.style.setProperty('--a', a); sat.style.setProperty('--c', c);
+      orbit.appendChild(sat);
+      var l = document.createElement('span');
+      l.className = 'sat-l'; l.style.setProperty('--a', a); l.textContent = LABEL[k] || k;
+      labels.appendChild(l);
+    });
+
+    if (PEEK.length) {
+      $('peek').innerHTML = PEEK.map(function (t) { return '<div><strong>' + t + '</strong>迷雾中</div>'; }).join('');
+    } else {
+      $('peek').innerHTML = '';
+    }
+  }
+
   function renderHud() {
+    var box = $('hudStats');
+    if (box.getAttribute('data-built') !== '1') {
+      box.innerHTML = KEYS.map(function (k) {
+        return '<div class="stat" data-k="' + k + '"><span>' + (LABEL[k] || k) +
+          '</span><span class="track"><span class="fill"></span></span><span class="v">0</span></div>';
+      }).join('');
+      box.setAttribute('data-built', '1');
+    }
     KEYS.forEach(function (k) {
-      var el = document.querySelector('.stat[data-k="' + k + '"]');
-      var v = clamp(state.stats[k]);
-      el.querySelector('.fill').style.width = v + '%';
+      var v = Math.round(state.stats[k]);
+      var el = box.querySelector('.stat[data-k="' + k + '"]');
+      el.querySelector('.fill').style.width = Math.max(0, Math.min(100, v / maxOf(k) * 100)) + '%';
       el.querySelector('.v').textContent = v;
       el.setAttribute('aria-label', LABEL[k] + ' ' + v);
     });
     $('daysLeft').textContent = daysLeft();
     $('heroDays').textContent = daysLeft();
-    $('whoSub').textContent = state.lane ? (DATA.meta.sub + ' · ' + state.lane + '轨') : DATA.meta.sub;
+    $('whoSub').textContent = [META.sub || '大学生活模拟', state.college, state.lane ? state.lane + '线' : null]
+      .filter(Boolean).join(' · ');
+
+    var pr = progress();
+    var chips = [
+      state.college ? ('学院 · ' + state.college) : '先选学院 · 5 个方向',
+      state.lane ? ('路线 · ' + state.lane) : '分叉点在大三 · 未定',
+      '进度 ' + pr.done + ' / ' + pr.total
+    ];
     var c = $('chips');
     c.innerHTML = '';
-    var chips = state.lane
-      ? ['已分叉 · ' + state.lane + '轨', '进度 ' + state.log.length + ' / ' + queue().length, '结局已锁定']
-      : ['四条轨道未生成', '分叉点在大三上', '结局预览 · 迷雾中'];
     chips.forEach(function (t) {
       var s = document.createElement('span');
       s.className = 'chip'; s.textContent = t; c.appendChild(s);
@@ -561,22 +727,26 @@
   }
 
   function renderMap() {
-    var q = queue();
-    var doneN = state.log.length;
-    var years = [
-      { k: '大一', s: DATA.meta.mapCopy['大一'], from: 0, to: 3 },
-      { k: '大二', s: DATA.meta.mapCopy['大二'], from: 3, to: 6 },
-      { k: '大三 · 分叉点', s: state.lane ? ('已锁定：' + state.lane + '轨') : DATA.meta.mapCopy['大三'], from: 6, to: 8, lanes: true },
-      { k: '大四 · Boss 战', s: DATA.meta.mapCopy['大四'], from: 8, to: 99 }
-    ];
+    var ci = curIndex();
+    var curStage = ci < 0 ? 99 : ((BY_ID[state.queue[ci]] || {}).stage || 99);
     var html = '';
-    years.forEach(function (y) {
-      var st = doneN >= y.to ? 'done' : (doneN >= y.from ? 'now' : 'lock');
-      html += '<div class="yr" data-s="' + st + '"><div class="yk">' + y.k + '</div><div class="ys">' + y.s + '</div>';
-      if (y.lanes) {
+    STAGES.forEach(function (st, idx) {
+      var n = idx + 1;
+      var status = (curStage !== 99 && curStage > n) ? 'done' : (curStage === n ? 'now' : (curStage === 99 ? 'done' : 'lock'));
+      var tot = 0, took = 0;
+      for (var i = 0; i < state.queue.length; i++) {
+        var e = BY_ID[state.queue[i]];
+        if (!e || (e.stage || 0) !== n || !matched(e)) continue;
+        tot++;
+        if (i < state.qi) took++;
+      }
+      html += '<div class="yr" data-s="' + status + '"><div class="yk">' + st.k + '</div>' +
+        '<div class="ys">' + (st.s || '') + '</div>' +
+        (tot ? '<div class="yn">' + took + ' / ' + tot + ' 个事件</div>' : '');
+      if (st.lanes) {
         html += '<div class="lanes">';
         LANES.forEach(function (l) {
-          html += '<span class="lane" data-p="' + (state.lane === l ? '1' : '0') + '">' + l + '轨</span>';
+          html += '<span class="lane" data-p="' + (state.lane === l ? '1' : '0') + '">' + l + '</span>';
         });
         html += '</div>';
       }
@@ -586,9 +756,10 @@
   }
 
   function deltaChips(x) {
+    if (!x) return '';
     return KEYS.filter(function (k) { return x[k]; }).map(function (k) {
       var v = x[k];
-      return '<span class="' + (v > 0 ? 'up' : 'dn') + '">' + LABEL[k] + ' ' + (v > 0 ? '+' : '−') + Math.abs(v) + '</span>';
+      return '<span class="' + (v > 0 ? 'up' : 'dn') + '">' + (LABEL[k] || k) + ' ' + (v > 0 ? '+' : '−') + Math.abs(v) + '</span>';
     }).join('');
   }
 
@@ -599,32 +770,38 @@
      ===================================================================== */
 
   function sceneModel() {
-    var needRest = state.stats.energy < 15 && state.forcedRestFor !== state.qi;
     var e = currentEvent();
 
-    if (state.stats.energy <= 0 || !e || nearEnd()) {
+    if (!e) {
       var end = pickEnding();
       return {
-        kind: 'ending', year: state.lane ? state.lane + '轨' : '未分叉',
-        kicker: 'ENDING　·　' + (state.lane ? state.lane + '轨' : '未分叉'),
-        title: end.title, text: end.text, choices: []
+        kind: 'ending',
+        year: state.lane ? state.lane + '线' : '未分叉',
+        kicker: 'ENDING　·　' + (end.tier || (state.lane ? state.lane + '线' : '未分叉')),
+        title: end.title, text: end.text, tier: end.tier, choices: []
       };
     }
-    if (needRest) {
+
+    var t = pendingTrigger();
+    if (t) {
       return {
-        kind: 'rest', year: '', kicker: 'FORCED REST',
-        title: '精力见底，这周你什么都做不了',
-        text: '身体先替你做了决定。休息不算浪费，只是账换了个地方记。',
-        choices: [{ i: -1, rest: true, k: '睡满整个周末', d: '精力回一部分，进度停两周', x: { energy: 26, academic: -3 } }]
+        kind: 'side', ev: t,
+        year: t.year || '突发',
+        kicker: 'SIDE EVENT　·　数值触底',
+        title: t.title, text: t.desc || '',
+        choices: t.options.map(function (o, i) { return { i: i, k: o.k, d: o.d, x: o.x, req: '', open: true }; })
       };
     }
+
     return {
-      kind: e.branch ? 'branch' : (e.boss ? 'boss' : 'event'),
-      year: e.year,
-      kicker: e.year + '　·　' + (e.branch ? 'BRANCH' : (e.boss ? 'BOSS' : 'EVENT')),
-      title: e.title, text: e.desc,
-      choices: e.options.map(function (o, i) {
-        return { i: i, k: o.k, d: o.d, x: o.x, lane: o.lane };
+      kind: e.branch ? 'branch' : (e.settle ? 'settle' : 'event'),
+      ev: e,
+      year: e.year || '',
+      kicker: (e.year || '') + '　·　' + (e.branch ? 'BRANCH 分叉点' : (e.settle ? '结算' : 'EVENT')),
+      title: e.title, text: e.desc || '',
+      choices: (e.options || []).map(function (o, i) {
+        var open = optOpen(e, o);
+        return { i: i, k: o.k, d: o.d, x: o.x, lane: o.lane, open: open, req: open ? '' : reqText(o) };
       })
     };
   }
@@ -633,83 +810,87 @@
     var box = $('loop');
     var sc = sceneModel();
 
-    if (sc.kind === 'ending') { box.innerHTML = ''; $('loopTitle').textContent = '你走完了这条轨道'; return; }
-
-    if (sc.kind === 'rest') {
-      $('loopTitle').textContent = '你撑不住了';
-      var h = '<div class="card rest"><div class="k">' + sc.kicker + '</div>' +
-        '<h3>' + sc.title + '</h3><div class="desc">' + sc.text + '</div><div class="opts">';
-      sc.choices.forEach(function (c) {
-        h += '<button class="opt" type="button" data-rest="1"><span class="ok">' + c.k + '</span>' +
-          '<span class="od">' + c.d + '</span><span class="dl">' + deltaChips(c.x) + '</span></button>';
-      });
-      box.innerHTML = h + '</div></div>';
+    if (sc.kind === 'ending') {
+      box.innerHTML = '';
+      $('loopTitle').textContent = '你走完了这条线';
       return;
     }
 
-    $('loopTitle').textContent = sc.kind === 'branch' ? '这一下决定后面两年' : '现在，做决定';
-    var h2 = '<div class="card"><div class="k">' + sc.kicker + '</div>' +
+    var cls = sc.kind === 'side' ? 'card side' : (sc.kind === 'settle' ? 'card settle' : 'card');
+    $('loopTitle').textContent = sc.kind === 'branch' ? '这一下决定后面两年'
+      : (sc.kind === 'side' ? '有些事不请自来' : (sc.kind === 'settle' ? '这一学期结束了' : '现在，做决定'));
+
+    var h = '<div class="' + cls + '"><div class="k">' + sc.kicker + '</div>' +
       '<h3>' + sc.title + '</h3><div class="desc">' + sc.text + '</div><div class="opts">';
     sc.choices.forEach(function (c) {
-      h2 += '<button class="opt" type="button" data-i="' + c.i + '"' + (c.lane ? ' data-lane="' + c.lane + '"' : '') + '>' +
+      h += '<button class="opt" type="button" data-i="' + c.i + '"' + (c.lane ? ' data-lane="' + c.lane + '"' : '') +
+        (c.open ? '' : ' disabled') + '>' +
         '<span class="ok">' + c.k + (c.d ? '　<small style="color:var(--dim);font-weight:400">' + c.d + '</small>' : '') + '</span>' +
+        (c.open ? '' : '<span class="req">' + c.req + '</span>') +
         '<span class="dl">' + deltaChips(c.x) + '</span></button>';
     });
-    box.innerHTML = h2 + '</div></div>';
+    box.innerHTML = h + '</div></div>';
   }
 
-  function applyChoice(e, o) {
-    KEYS.forEach(function (k) { if (o.x && o.x[k]) state.stats[k] = clamp(state.stats[k] + o.x[k]); });
+  function applyChoice(e, o, isSide) {
+    if (o.x) KEYS.forEach(function (k) { if (o.x[k]) addStat(k, o.x[k]); });
+    if (o.set) Object.keys(o.set).forEach(function (k) {
+      if (k === 'college') state.college = o.set[k];
+      else if (k === 'lane') state.lane = o.set[k];
+      else if (KEYS.indexOf(k) >= 0) setStat(k, o.set[k]);
+    });
     if (o.lane) state.lane = o.lane;
-    state.day = Math.min(TOTAL_DAYS, state.day + (e.days || 30));
-    state.log.push({ y: e.year, t: e.title, c: o.k, o: o.o });
-    state.qi++;
-    $('outcome').innerHTML = '<b>' + o.k + '</b>　' + o.o;
+    if (o.f) o.f.forEach(function (f) { if (state.flags.indexOf(f) < 0) state.flags.push(f); });
+
+    if (isSide) {
+      if (state.fired.indexOf(e.id) < 0) state.fired.push(e.id);
+    } else {
+      state.day = Math.min(TOTAL_DAYS, state.day + (e.days || 20));
+      // 队列里有被跳过的（换学院/换路线/条件不符）事件，所以 qi 要直接跳到
+      // 刚答完那条事件的下一格，而不是 +1 —— 否则同一张卡会反复出现。
+      var at = curIndex();
+      state.qi = (at >= 0 ? at : state.qi) + 1;
+    }
+    state.log.push({ y: e.year || '', t: e.title, c: o.k, o: o.o, s: e.stage || 0 });
+
+    $('outcome').innerHTML = '<b>' + o.k + '</b>　' + (o.o || '');
     if (o.lane) burst(90, ['#4de3ff', '#9b6bff', '#5cf0b0']);
     else burst(34, ['#4de3ff', '#9b6bff']);
     save(); renderAll();
   }
 
-  function rest() {
-    state.stats.energy = clamp(state.stats.energy + 26);
-    state.stats.academic = clamp(state.stats.academic - 3);
-    state.day = Math.min(TOTAL_DAYS, state.day + 14);
-    state.forcedRestFor = state.qi;
-    $('outcome').innerHTML = '<b>你睡了两天</b>　醒来的时候，窗外在下雨，你居然有点想吃食堂的饭。';
-    save(); renderAll();
-  }
-
   function pickEnding() {
-    var s = state.stats;
-    if (!state.lane) return ALLROUND;
-    var list = ENDINGS.filter(function (e) { return e.lane === state.lane; });
-    for (var i = 0; i < list.length; i++) if (list[i].test(s)) return list[i];
-    return list[list.length - 1];
+    for (var i = 0; i < ENDINGS.length; i++) {
+      if (ENDINGS[i].test(state.stats, state)) return ENDINGS[i];
+    }
+    return { tier: '普通结局', title: '普通的四年', text: '没有大起大落，你按自己的节奏走完了这四年。' };
   }
 
   function renderEnding() {
-    var on = nearEnd() || state.stats.energy <= 0;
+    var on = !currentEvent();
     var sec = $('ending');
     if (!on) { sec.classList.remove('on'); return; }
     sec.classList.add('on');
     var e = pickEnding();
-    var html = '<div class="k">ENDING　·　' + (state.lane ? state.lane + '轨' : '未分叉') + '</div>' +
+    var pr = progress();
+    var html = '<div class="k">ENDING　·　' + (state.lane ? state.lane + '线' : '未分叉') + '</div>' +
+      (e.tier ? '<div class="tier">' + e.tier + '</div>' : '') +
       '<h3>' + e.title + '</h3><p>' + e.text + '</p>' +
       '<div class="grid">';
     KEYS.forEach(function (k) {
-      html += '<div>' + LABEL[k] + '<b>' + clamp(state.stats[k]) + '</b></div>';
+      html += '<div>' + (LABEL[k] || k) + '<b>' + Math.round(state.stats[k]) + '</b></div>';
     });
-    html += '<div>走过节点<b>' + state.log.length + '</b></div>';
+    html += '<div>走过事件<b>' + pr.done + '</b></div>';
     html += '<div>用时天数<b>' + Math.min(state.day, TOTAL_DAYS) + '</b></div></div>';
     if (state.log.length) {
       html += '<div class="log">';
       state.log.forEach(function (l) {
-        html += '<p><span>' + l.y + '</span>　' + l.t + '　→　' + l.c + '<br>' + l.o + '</p>';
+        html += '<p><span>' + (l.y || '') + '</span>　' + l.t + '　→　' + l.c + '<br>' + (l.o || '') + '</p>';
       });
       html += '</div>';
     }
     html += '<div class="row"><button class="b p" type="button" id="btnEndExport">把这四年存成码</button>' +
-      '<button class="b" type="button" id="btnAgain">换一条轨道重来</button></div>';
+      '<button class="b" type="button" id="btnAgain">换一条线重来</button></div>';
     $('endCard').innerHTML = html;
     var be = $('btnEndExport'), ba = $('btnAgain');
     if (be) be.addEventListener('click', doExport);
@@ -753,11 +934,12 @@
       var b = document.createElement('button');
       b.className = 'vn-choice';
       b.type = 'button';
-      if (c.rest) b.setAttribute('data-rest', '1');
-      else b.setAttribute('data-i', String(c.i));
+      b.setAttribute('data-i', String(c.i));
+      if (!c.open) b.disabled = true;
       b.innerHTML = '<span class="vnk">' + c.k + '</span>' +
         (c.d ? '<span class="vnd">' + c.d + '</span>' : '') +
-        '<span class="dl">' + deltaChips(c.x) + '</span>';
+        '<span class="dl">' + deltaChips(c.x) + '</span>' +
+        (c.open ? '' : '<span class="req">' + c.req + '</span>');
       chEl.appendChild(b);
     });
     $('vnHint').textContent = '点击推进 · ESC 退出';
@@ -781,14 +963,15 @@
     if (vnTypeTimer) { clearInterval(vnTypeTimer); vnTypeTimer = null; }
 
     if (sc.kind === 'ending') {
-      $('vnText').innerHTML = sc.text + '<div class="vn-endstat">' +
-        KEYS.map(function (k) { return '<span>' + LABEL[k] + ' <b>' + clamp(state.stats[k]) + '</b></span>'; }).join('') +
-        '<span>走过节点 <b>' + state.log.length + '</b></span></div>';
+      $('vnText').innerHTML = sc.text + ((sc.tier) ? '<div class="vn-endstat"><span>' + sc.tier + '</span></div>' : '') +
+        '<div class="vn-endstat">' +
+        KEYS.map(function (k) { return '<span>' + (LABEL[k] || k) + ' <b>' + Math.round(state.stats[k]) + '</b></span>'; }).join('') +
+        '<span>走过事件 <b>' + progress().done + '</b></span></div>';
       var again = document.createElement('button');
       again.className = 'vn-choice'; again.type = 'button'; again.setAttribute('data-again', '1');
-      again.innerHTML = '<span class="vnk">换一条轨道重来</span>';
+      again.innerHTML = '<span class="vnk">换一条线重来</span>';
       $('vnChoices').appendChild(again);
-      $('vnHint').textContent = '这条轨道走完了';
+      $('vnHint').textContent = '这条线走完了';
       return;
     }
 
@@ -817,15 +1000,20 @@
      6. 交互绑定
      ===================================================================== */
 
+  function chooseNext(i) {
+    var sc = sceneModel();
+    if (sc.kind === 'ending') return;
+    var e = sc.ev;
+    var o = e && e.options ? e.options[i] : null;
+    if (!o || !optOpen(e, o)) return;
+    applyChoice(e, o, sc.kind === 'side');
+  }
+
   // 星轨模板的选择
   $('loop').addEventListener('click', function (ev) {
     var b = ev.target.closest ? ev.target.closest('button') : null;
-    if (!b) return;
-    if (b.hasAttribute('data-rest')) return rest();
-    var i = parseInt(b.getAttribute('data-i'), 10);
-    var e = currentEvent();
-    if (!e || !e.options[i]) return;
-    applyChoice(e, e.options[i]);
+    if (!b || b.disabled) return;
+    chooseNext(parseInt(b.getAttribute('data-i'), 10));
   });
 
   // 视觉小说模板的选择（同一个内核，不同钩子来源）
@@ -834,11 +1022,8 @@
     if (!b) { vnFinishTyping(); return; }
     if (b.id === 'btnVnClose') { vnClose(); return; }
     if (b.hasAttribute('data-again')) { doReset(); return; }
-    if (b.hasAttribute('data-rest')) { rest(); return; }
     if (b.hasAttribute('data-i')) {
-      var i = parseInt(b.getAttribute('data-i'), 10);
-      var e = currentEvent();
-      if (e && e.options[i]) applyChoice(e, e.options[i]);
+      if (!b.disabled) chooseNext(parseInt(b.getAttribute('data-i'), 10));
       return;
     }
     vnFinishTyping();
@@ -859,7 +1044,7 @@
     } catch (err) { code = ''; }
     var box = $('codeBox');
     if (box) { box.value = code; box.select(); }
-    $('saveNote').textContent = '这串码里有你全部的数值、轨道和选择记录。存到备忘录里就能换设备。';
+    $('saveNote').textContent = '这串码里有你全部 8 维数值、学院、路线和选择记录。存到备忘录里就能换设备。';
     toast('已生成，复制走吧');
   }
 
@@ -875,28 +1060,36 @@
       if (!p || !p.stats) throw new Error('bad');
       state = load2(p);
       save(); renderAll();
-      $('outcome').innerHTML = '<b>已导入</b>　你的星轨接回来了。';
+      $('outcome').innerHTML = '<b>已导入</b>　你的这四年接回来了。';
       toast('接回来了');
     } catch (err) { toast('这串码读不出来，检查一下有没有漏字符'); }
   }
 
   function load2(p) {
-    var s = clone(FRESH);
-    KEYS.forEach(function (k) { if (typeof p.stats[k] === 'number') s.stats[k] = clamp(p.stats[k]); });
-    ['qi', 'day', 'forcedRestFor', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
+    var s = freshState();
+    sameKeys(p.stats, s.stats);
+    ['qi', 'day', 'lastSeen'].forEach(function (k) { if (typeof p[k] === 'number') s[k] = p[k]; });
+    if (typeof p.college === 'string') s.college = p.college;
     if (typeof p.lane === 'string' && LANES.indexOf(p.lane) >= 0) s.lane = p.lane;
-    if (Array.isArray(p.log)) s.log = p.log.slice(-40);
+    if (Array.isArray(p.log)) s.log = p.log.slice(-60);
+    if (Array.isArray(p.flags)) s.flags = p.flags.slice(0, 40);
+    if (Array.isArray(p.fired)) s.fired = p.fired.slice(0, 20);
+    if (Array.isArray(p.queue) && p.queue.length) {
+      var q = p.queue.filter(function (id) { return BY_ID[id]; });
+      if (q.length) s.queue = q;
+    }
+    if (s.qi > s.queue.length) s.qi = s.queue.length;
     return s;
   }
 
   function doReset() {
     try { localStorage.removeItem(SKEY); } catch (e) {}
-    state = clone(FRESH); save(); renderAll();
+    state = freshState(); save(); renderAll();
     $('outcome').textContent = '';
     $('codeBox').value = '';
     $('saveNote').textContent = '';
     window.scrollTo({ top: 0, behavior: 'smooth' });
-    toast('新的星轨开始了');
+    toast('新的四年开始了');
   }
 
   $('btnExport').addEventListener('click', doExport);
@@ -904,7 +1097,7 @@
   $('btnReset').addEventListener('click', doReset);
 
   /* =====================================================================
-     6. 氛围：星场 / 撒花 / 归来礼包
+     7. 氛围：星场 / 撒花 / 归来礼包
      ===================================================================== */
 
   var cv = $('sky'), cx = cv.getContext('2d'), stars = [], dpr = 1;
@@ -981,23 +1174,24 @@
     var gap = (Date.now() - state.lastSeen) / 86400000;
     if (gap < 6) return;
     var d = Math.floor(gap);
-    state.stats.energy = clamp(state.stats.energy + 5);
+    addStat('mind', 5);
     save();
     setTimeout(function () {
-      toast('你走了 ' + d + ' 天。轨道上多了几颗尘埃，精力 +5。');
+      toast('你走了 ' + d + ' 天。室友帮你占了座，心态 +5。');
     }, 700);
   }
 
   /* =====================================================================
-     7. 启动
+     8. 启动
      ===================================================================== */
 
   window.addEventListener('resize', function () { buildStars(); }, { passive: true });
+  renderHero();
   buildStars();
   drawStars();
   welcomeBack();
   renderAll();
-  if (nearEnd()) setTimeout(function () { $('ending').scrollIntoView({ behavior: 'smooth' }); }, 500);
+  if (!currentEvent()) setTimeout(function () { $('ending').scrollIntoView({ behavior: 'smooth' }); }, 500);
 })();
 </script>
 </body>

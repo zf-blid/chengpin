@@ -34,11 +34,38 @@ BACKUP_DIR = os.path.join(HERE, "backups")
 
 DEFAULT_PASSWORD = "xingji2026"  # 首次运行使用的初始密码，登录后请到 admin_config.json 更改
 
-# 属性中文名 -> 数据 key
+# 属性中文名 -> 数据 key（8 维：学业 人际 心态 资源 金钱 技能 体魄 声望）
 KEYMAP = {
-    "学术": "academic", "社交": "social", "搞钱": "money", "精力": "energy",
-    "academic": "academic", "social": "social", "money": "money", "energy": "energy",
+    "学业": "gpa", "GPA": "gpa", "绩点": "gpa", "gpa": "gpa", "academic": "gpa",
+    "人际": "social", "社交": "social", "social": "social",
+    "心态": "mind", "心理": "mind", "mind": "mind",
+    "资源": "resource", "机会": "resource", "resource": "resource",
+    "金钱": "money", "钱": "money", "money": "money",
+    "技能": "skill", "skill": "skill",
+    "体魄": "body", "身体": "body", "body": "body",
+    "声望": "fame", "影响力": "fame", "fame": "fame",
 }
+
+# 导出大纲时用中文写回去（KEYMAP 有多个别名，反查要固定用这一张）
+KEY_CN = {"gpa": "学业", "social": "人际", "mind": "心态", "resource": "资源",
+          "money": "金钱", "skill": "技能", "body": "体魄", "fame": "声望"}
+
+DEFAULT_KEYS = ["gpa", "social", "mind", "resource", "money", "skill", "body", "fame"]
+DEFAULT_LABEL = {"gpa": "学业", "social": "人际", "mind": "心态", "resource": "资源",
+                 "money": "金钱", "skill": "技能", "body": "体魄", "fame": "声望"}
+DEFAULT_FRESH = {"gpa": 60, "social": 30, "mind": 70, "resource": 10,
+                 "money": 1500, "skill": 20, "body": 80, "fame": 0}
+DEFAULT_STAGES = [
+    {"k": "阶段一 · 入学军训", "s": "第 1-2 周"},
+    {"k": "阶段二 · 大一上学期", "s": "适应期"},
+    {"k": "阶段三 · 大一下 ~ 大二", "s": "成长期"},
+    {"k": "阶段四 · 大三", "s": "关键方向抉择", "lanes": True},
+    {"k": "阶段五 · 大四", "s": "毕业与结局"},
+]
+
+
+def stat_of(name):
+    return KEYMAP.get((name or "").strip())
 
 
 def jdumps(o):
@@ -175,9 +202,9 @@ def current_game():
 # 脑图 / 大纲 → 剧本
 # ---------------------------------------------------------------------------
 
-KNOWN_KEYS = {"x", "d", "o", "lane", "year", "phase", "days", "onlyLane",
-              "desc", "branch", "boss", "when", "title", "totalDays",
-              "mapCopy", "text", "v"}
+KNOWN_KEYS = {"x", "d", "o", "lane", "year", "phase", "days", "onlyLane", "onlyCollege",
+              "desc", "branch", "boss", "when", "title", "totalDays", "stage", "settle",
+              "need", "needAny", "cap", "fallback", "f", "once", "tier", "s", "lanes", "text", "v"}
 
 
 def split_meta(line):
@@ -237,6 +264,41 @@ def parse_stats(x):
             if key:
                 out[key] = int(m.group(3))  # 作为 when 片段，这里只存正数占位
     return out
+
+
+def parse_reqs(x):
+    """'人际>40 声望>10' / '学业<60' -> (need 下限, cap 上限)。"""
+    need, cap = {}, {}
+    for token in re.split(r"[\s,，;；、]+", x or ""):
+        token = token.strip()
+        if not token:
+            continue
+        m = re.match(r"^(.+?)(>=|<=|>|<)\s*(\d+)$", token)
+        if not m:
+            continue
+        k = stat_of(m.group(1))
+        if not k:
+            continue
+        op, v = m.group(2), int(m.group(3))
+        if op in (">=", ">"):
+            need[k] = v + (1 if op == ">" else 0)
+        else:
+            cap[k] = v if op == "<" else v + 1
+    return need, cap
+
+
+def parse_any(x):
+    """'技能>50 资源>40' -> needAny（满足任意一条即可）。"""
+    anym = {}
+    for token in re.split(r"[\s,，;；、]+", x or ""):
+        m = re.match(r"^(.+?)(>=|>)\s*(\d+)$", token.strip())
+        if m and stat_of(m.group(1)):
+            anym[stat_of(m.group(1))] = int(m.group(3)) + (1 if m.group(2) == ">" else 0)
+    return anym
+
+
+def parse_flags(x):
+    return [t for t in re.split(r"[\s,，;；、]+", x or "") if t]
 
 
 def tree_from_text(text):
@@ -358,23 +420,136 @@ def parse_file_to_nodes(filename, data):
     return tree_from_text(text)
 
 
+def node_to_event(node, idx, warnings, pool=False):
+    """一个节点 → 一个事件（池事件 / 特殊事件也用它）。"""
+    title, meta_ = split_meta(node["text"])
+    ev = {"id": ("p%d" if pool else "e%d") % idx, "title": title, "options": []}
+    if pool:
+        ev["pool"] = True
+    for k in ("year", "desc"):
+        if meta_.get(k):
+            ev[k] = meta_[k]
+    if meta_.get("days"):
+        try:
+            ev["days"] = int(meta_["days"])
+        except Exception:
+            pass
+    if meta_.get("stage"):
+        try:
+            ev["stage"] = int(meta_["stage"])
+        except Exception:
+            pass
+    if meta_.get("phase"):
+        ev["phase"] = meta_["phase"]
+    if meta_.get("onlyLane"):
+        ev["onlyLane"] = meta_["onlyLane"]
+    if meta_.get("onlyCollege"):
+        ev["onlyCollege"] = meta_["onlyCollege"]
+    if meta_.get("when"):
+        ev["when"] = meta_["when"]
+    if meta_.get("branch") in ("true", "1"):
+        ev["branch"] = True
+        ev["phase"] = ev.get("phase", "branch")
+    if meta_.get("boss") in ("true", "1"):
+        ev["boss"] = True
+        ev["phase"] = ev.get("phase", "post")
+    if meta_.get("settle") in ("true", "1"):
+        ev["settle"] = True
+
+    for oc in node.get("children") or []:
+        ok, ometa = split_meta(oc["text"])
+        opt = {"k": ok}
+        if ometa.get("d"):
+            opt["d"] = ometa["d"]
+        if ometa.get("o"):
+            opt["o"] = ometa["o"]
+        if ometa.get("lane"):
+            opt["lane"] = ometa["lane"]
+        if ometa.get("x"):
+            stat = parse_stats(ometa["x"])
+            if stat:
+                opt["x"] = stat
+            else:
+                warnings.append("选项「%s」的 x 数值没解析出来: %s" % (ok, ometa["x"]))
+        need, cap = parse_reqs((ometa.get("need", "") + " " + ometa.get("cap", "")).strip())
+        if need:
+            opt["need"] = need
+        if cap:
+            opt["cap"] = cap
+        if ometa.get("needAny"):
+            anym = parse_any(ometa["needAny"])
+            if anym:
+                opt["needAny"] = anym
+        if ometa.get("fallback") in ("true", "1"):
+            opt["fallback"] = True
+        if ometa.get("f"):
+            opt["f"] = parse_flags(ometa["f"])
+        ev["options"].append(opt)
+
+    if not ev["options"]:
+        warnings.append("事件「%s」没有任何选项。" % title)
+    if not pool and "phase" not in ev:
+        ev["phase"] = "pre"
+    return ev, meta_
+
+
+def section_of(title):
+    """小节名判定：只认干净的节标题，"阶段结算：军训结束" 这类事件名不算。
+    脑图里常写成「随机事件池（每学期概率触发）」，括号里的说明先摘掉。"""
+    t = re.sub(r"[（(].*?[）)]", "", title or "").strip().lower()
+    for name in ("阶段", "阶段列表", "stages", "stage"):
+        if t == name:
+            return "stages"
+    for name in ("随机事件池", "事件池", "pool"):
+        if t == name:
+            return "pool"
+    for name in ("特殊事件", "突发事件", "触发事件", "triggers", "trigger"):
+        if t == name:
+            return "triggers"
+    for name in ("轨道", "线路", "lanes"):
+        if t == name:
+            return "lanes"
+    if t.startswith("结局") or t == "endings":
+        return "endings"
+    if t in ("meta", "设置", "配置", "元数据"):
+        return "meta"
+    return None
+
+
+def collect_endings(node, endings, tier=""):
+    """结局节下面的孩子：可以是结局本身，也可以先按「顶级结局」分级再放结局。"""
+    title, meta_ = split_meta(node["text"])
+    clean = re.sub(r"[（(].*?[）)]", "", title or "").strip()
+    kids = node.get("children") or []
+    if kids and ("结局" in clean or clean.lower().endswith("ending")):
+        for c in kids:
+            collect_endings(c, endings, clean)
+        return
+    ending = {"lane": meta_.get("lane", ""), "title": title,
+              "text": meta_.get("text", "") or meta_.get("o", "")}
+    if meta_.get("tier"):
+        ending["tier"] = meta_["tier"]
+    elif tier:
+        ending["tier"] = tier
+    if meta_.get("when"):
+        ending["when"] = re.sub(r"\s+", "&&", meta_["when"].strip())
+    endings.append(ending)
+
+
 def nodes_to_game(nodes):
     """整棵大纲树 → 剧本。约定见 admin.html 的说明。"""
     root = build_tree(nodes)
-
-    def imports(tree):
-        out = []
-        for c in tree.get("children") or []:
-            out.append(c)
-        return out
 
     kids = root.get("children") or []
     game = {"meta": {}, "lanes": [], "events": [], "endings": [], "allround": None}
     warnings = []
 
-    meta = {"keys": ["academic", "social", "money", "energy"],
-            "label": {"academic": "学术力", "social": "社交力", "money": "搞钱力", "energy": "精力"},
-            "fresh": {"stats": {"academic": 40, "social": 35, "money": 20, "energy": 80}},
+    meta = {"keys": list(DEFAULT_KEYS),
+            "label": dict(DEFAULT_LABEL),
+            "max": {"money": 5000},
+            "fresh": {"stats": dict(DEFAULT_FRESH)},
+            "poolRate": 0.45,
+            "stages": [],
             "mapCopy": {}}
     # 把顶层拆成「游戏名 + 要处理的事件/章节」
     title = ""
@@ -398,25 +573,50 @@ def nodes_to_game(nodes):
     events = []
     endings = []
     lanes = []
+    stages = []
+    pool = []
+    triggers = []
 
     for node in items_todo:
         title, meta_ = split_meta(node["text"])
         ltitle = title.lower()
-        if ltitle.startswith("结局") or "ending" in ltitle or ltitle.startswith("end"):
+        sec = section_of(title)
+        if sec == "endings":
             for ec in node.get("children") or []:
-                en_title, en_meta = split_meta(ec["text"])
-                ending = {"lane": en_meta.get("lane", ""), "title": en_title, "text": en_meta.get("text", "") or en_meta.get("o", "")}
-                if "when" in en_meta:
-                    ending["when"] = en_meta["when"]
-                endings.append(ending)
+                collect_endings(ec, endings)
             continue
-        if ltitle.startswith("轨道") or ltitle.startswith("线路") or ltitle.startswith("lanes"):
+        if sec == "lanes":
             for lc in node.get("children") or []:
                 lname, _ = split_meta(lc["text"])
                 if lname:
                     lanes.append(lname)
             continue
-        if ltitle in ("meta", "设置", "配置", "元数据"):
+        if sec == "stages":
+            for sc in node.get("children") or []:
+                sk, sm = split_meta(sc["text"])
+                st = {"k": sk}
+                if sm.get("s"):
+                    st["s"] = sm["s"]
+                if sm.get("lanes") in ("true", "1") or "分叉" in sk:
+                    st["lanes"] = True
+                stages.append(st)
+            continue
+        if sec == "pool":
+            for pc in node.get("children") or []:
+                pev, _ = node_to_event(pc, len(pool) + 1, warnings, pool=True)
+                pool.append(pev)
+            continue
+        if sec == "triggers":
+            for tc in node.get("children") or []:
+                tev, tm = node_to_event(tc, len(triggers) + 1, warnings)
+                tev["id"] = "t%d" % (len(triggers) + 1)
+                if tm.get("when"):
+                    tev["when"] = tm["when"]
+                if tm.get("once") not in ("false", "0", "no"):
+                    tev["once"] = True
+                triggers.append(tev)
+            continue
+        if sec == "meta":
             for mc in node.get("children") or []:
                 mt, mm_ = split_meta(mc["text"])
                 m = re.match(r"^\s*([A-Za-z\u4e00-\u9fff0-9]+)\s*=\s*(.*)$", mc["text"].strip())
@@ -441,115 +641,137 @@ def nodes_to_game(nodes):
             continue
 
         # 默认当一个事件处理
-        ev = {"id": "e%d" % (len(events) + 1), "title": title, "options": []}
-        ev.update({k: meta_.get(k) for k in ("year", "desc", "days") if meta_.get(k)})
-        if meta_.get("days"):
-            try: ev["days"] = int(meta_["days"])
-            except Exception: pass
-        if meta_.get("phase"):
-            ev["phase"] = meta_["phase"]
-        if meta_.get("onlyLane"):
-            ev["onlyLane"] = meta_["onlyLane"]
-        if meta_.get("branch") in ("true", "1"):
-            ev["branch"] = True
-            ev["phase"] = ev.get("phase", "branch")
-        if meta_.get("boss") in ("true", "1"):
-            ev["boss"] = True
-            ev["phase"] = ev.get("phase", "post")
-
-        for oc in node.get("children") or []:
-            ok, ometa = split_meta(oc["text"])
-            opt = {"k": ok}
-            if ometa.get("d"):
-                opt["d"] = ometa["d"]
-            if ometa.get("o"):
-                opt["o"] = ometa["o"]
-            if ometa.get("lane"):
-                opt["lane"] = ometa["lane"]
-                if ometa["lane"] not in lanes:
-                    lanes.append(ometa["lane"])
-            if ometa.get("x"):
-                stat = parse_stats(ometa["x"])
-                if stat:
-                    opt["x"] = stat
-                else:
-                    warnings.append("选项「%s」的 x 数值没解析出来: %s" % (ok, ometa["x"]))
-            ev["options"].append(opt)
-        if not ev["options"]:
-            warnings.append("事件「%s」没有任何选项。" % title)
-        # 事件要有正确默认 phase/desc
-        if "phase" not in ev:
-            ev["phase"] = "pre"
+        ev, _ = node_to_event(node, len(events) + 1, warnings)
+        for o in ev.get("options", []):
+            if o.get("lane") and o["lane"] not in lanes:
+                lanes.append(o["lane"])
         events.append(ev)
 
     if not meta.get("mapCopy"):
-        meta["mapCopy"] = {"大一": "", "大二": "", "大三": "", "大四": ""}
+        meta["mapCopy"] = {}
     if "totalDays" not in meta:
         meta["totalDays"] = 1461
     if not meta.get("title"):
         meta["title"] = "未命名剧本"
+    if stages:
+        meta["stages"] = stages
+    else:
+        meta["stages"] = [dict(s) for s in DEFAULT_STAGES]
     if not lanes:
-        lanes = ["考研", "就业", "留学", "摆烂"]
+        lanes = ["考研/保研", "就业", "考公/考编", "创业"]
 
     game["meta"] = meta
     game["lanes"] = lanes
     game["events"] = events
     game["endings"] = endings
-    game["allround"] = {"title": "平凡的四年", "text": "没有大起大落，你按自己的节奏走完了这四年。"}
+    game["pool"] = pool
+    game["triggers"] = triggers
+    game["allround"] = {"title": "普通的四年", "text": "没有大起大落，你按自己的节奏走完了这四年。"}
     return game, warnings
+
+
+def event_tags(ev):
+    tags = []
+    for k in ("year", "phase", "days", "stage", "onlyLane", "onlyCollege", "when"):
+        if ev.get(k):
+            tags.append("%s=%s" % (k, ev[k]))
+    for k in ("branch", "boss", "settle", "pool"):
+        if ev.get(k):
+            tags.append("%s=true" % k)
+    if ev.get("desc"):
+        tags.append("desc=" + ev["desc"])
+    return tags
+
+
+def opt_tags(o):
+    ometa = []
+    if o.get("d"):
+        ometa.append("d=" + str(o.get("d", "")))
+    if o.get("o"):
+        ometa.append("o=" + str(o.get("o", "")))
+    if o.get("lane"):
+        ometa.append("lane=" + o.get("lane", ""))
+    if o.get("x"):
+        ometa.append("x=" + ",".join("%s%s%d" % (KEY_CN.get(kk, kk), "+" if vv > 0 else "", vv)
+                                     for kk, vv in o["x"].items()))
+    if o.get("need"):
+        ometa.append("need=" + " ".join("%s>%d" % (KEY_CN.get(kk, kk), vv - 1) for kk, vv in o["need"].items()))
+    if o.get("cap"):
+        ometa.append("cap=" + " ".join("%s<%d" % (KEY_CN.get(kk, kk), vv) for kk, vv in o["cap"].items()))
+    if o.get("needAny"):
+        ometa.append("needAny=" + " ".join("%s>%d" % (KEY_CN.get(kk, kk), vv - 1) for kk, vv in o["needAny"].items()))
+    if o.get("fallback"):
+        ometa.append("fallback=true")
+    if o.get("f"):
+        ometa.append("f=" + " ".join(o["f"]))
+    return ometa
 
 
 def game_to_outline(game):
     """剧本 → 大纲文本。顶层第一节是游戏名，其余顶层是内容；
-    用 # / ## / - 分层。该格式与 import 解析完全互逆（可回环）。"""
+    用 # / ## / - 分层。该格式与 import 解析尽量互逆（可回环）。"""
+    gmeta = game.get("meta", {})
     L = []
-    L.append(game.get("meta", {}).get("title", "剧本") +
-             " | totalDays=" + str(game.get("meta", {}).get("totalDays", 1461)))
-    # meta / 轨道
+    L.append(gmeta.get("title", "剧本") +
+             " | totalDays=" + str(gmeta.get("totalDays", 1461)))
+    # meta / 阶段 / 轨道
     L.append("# meta")
-    L.append("## title = " + game["meta"].get("title", ""))
-    L.append("## totalDays = " + str(game.get("meta", {}).get("totalDays", 1461)))
-    L.append("## mapCopy = " + json.dumps(game["meta"].get("mapCopy", {}), ensure_ascii=False)[:200])
+    L.append("## title = " + gmeta.get("title", ""))
+    L.append("## totalDays = " + str(gmeta.get("totalDays", 1461)))
+    if gmeta.get("mapCopy"):
+        L.append("## mapCopy = " + json.dumps(gmeta.get("mapCopy", {}), ensure_ascii=False)[:200])
+    if gmeta.get("stages"):
+        L.append("# 阶段")
+        for st in gmeta.get("stages", []):
+            tags = []
+            if st.get("s"):
+                tags.append("s=" + st["s"])
+            if st.get("lanes"):
+                tags.append("lanes=true")
+            L.append("## " + st.get("k", "") + (" | " + ", ".join(tags) if tags else ""))
     if game.get("lanes"):
         L.append("# 轨道")
         for ln in game["lanes"]:
             L.append("## " + ln)
     # 事件（顶层一项一个事件）
     for ev in game.get("events", []):
-        tags = []
-        for k in ("year", "phase", "days", "onlyLane"):
-            if ev.get(k):
-                tags.append("%s=%s" % (k, ev[k]))
-        if ev.get("branch"):
-            tags.append("branch=true")
-        if ev.get("boss"):
-            tags.append("boss=true")
-        if ev.get("desc"):
-            tags.append("desc=" + ev["desc"])
+        tags = event_tags(ev)
         L.append(ev.get("title", "") + (" | " + ", ".join(tags) if tags else ""))
         for o in ev.get("options", []):
-            ometa = []
-            if o.get("d"):
-                ometa.append("d=" + str(o.get("d", "")))
-            if o.get("o"):
-                ometa.append("o=" + str(o.get("o", "")))
-            if o.get("lane"):
-                ometa.append("lane=" + o.get("lane", ""))
-            if o.get("x"):
-                rev = {v: k for k, v in KEYMAP.items()}
-                stats_txt = ",".join("%s%s%d" % (rev.get(kk, kk), "+" if vv > 0 else "", vv)
-                                     for kk, vv in o["x"].items())
-                ometa.append("x=" + stats_txt)
-            L.append("  - " + o.get("k", "") + (" | " + ", ".join(ometa) if ometa else ""))
+            om = opt_tags(o)
+            L.append("  - " + o.get("k", "") + (" | " + ", ".join(om) if om else ""))
+    # 随机事件池 / 特殊事件
+    if game.get("pool"):
+        L.append("# 随机事件池")
+        for ev in game["pool"]:
+            tags = event_tags(ev)
+            L.append("## " + ev.get("title", "") + (" | " + ", ".join(tags) if tags else ""))
+            for o in ev.get("options", []):
+                om = opt_tags(o)
+                L.append("    - " + o.get("k", "") + (" | " + ", ".join(om) if om else ""))
+    if game.get("triggers"):
+        L.append("# 特殊事件")
+        for ev in game["triggers"]:
+            tags = event_tags(ev)
+            if ev.get("once"):
+                tags.append("once=true")
+            L.append("## " + ev.get("title", "") + (" | " + ", ".join(tags) if tags else ""))
+            for o in ev.get("options", []):
+                om = opt_tags(o)
+                L.append("    - " + o.get("k", "") + (" | " + ", ".join(om) if om else ""))
     # 结局
     if game.get("endings"):
         L.append("# 结局")
         for e in game["endings"]:
-            etags = ["lane=" + e.get("lane", "")]
+            etags = []
+            if e.get("lane"):
+                etags.append("lane=" + e["lane"])
+            if e.get("tier"):
+                etags.append("tier=" + e["tier"])
             if e.get("when"):
-                etags.append("when=" + e.get("when", ""))
+                etags.append("when=" + e["when"])
             if e.get("text"):
-                etags.append("text=" + e.get("text", ""))
+                etags.append("text=" + e["text"])
             L.append("## " + e.get("title", "") + (" | " + ", ".join(etags) if etags else ""))
     return "\n".join(L)
 
@@ -609,6 +831,8 @@ class Handler(BaseHTTPRequestHandler):
                 "events": len(game.get("events", [])),
                 "endings": len(game.get("endings", [])),
                 "lanes": game.get("lanes", []),
+                "pool": len(game.get("pool", [])),
+                "triggers": len(game.get("triggers", [])),
                 "updated": os.path.getmtime(os.path.join(HERE, "data.js")) if published else 0,
             })
             return

@@ -81,6 +81,7 @@
   .badge{display:inline-block;font-size:10px;padding:1px 7px;border-radius:99px;margin-left:8px;vertical-align:1px}
   .badge.branch{background:rgba(255,200,97,.18);color:var(--amber);border:1px solid rgba(255,200,97,.4)}
   .badge.boss{background:rgba(255,107,107,.18);color:var(--red);border:1px solid rgba(255,107,107,.4)}
+  .badge.settle{background:rgba(92,240,176,.16);color:var(--green);border:1px solid rgba(92,240,176,.4)}
   .badge.lane{background:rgba(155,107,255,.16);color:#c9b6ff;border:1px solid rgba(155,107,255,.4)}
   .lanes-row{display:flex;gap:8px;flex-wrap:wrap;font-size:12px}
   .lanes-row span{padding:3px 10px;border-radius:99px;background:rgba(155,107,255,.12);border:1px solid rgba(155,107,255,.3);color:#c9b6ff}
@@ -116,7 +117,7 @@
 <!-- 主界面 -->
 <div id="app" class="hidden">
   <header>
-    <h1>大学星轨 · <em>创作台</em></h1>
+    <h1>我的大学抉择 · <em>创作台</em></h1>
     <span class="spacer"></span>
     <span class="stat-chip" id="chipPub"><span class="status-dot"></span>未发布</span>
     <span class="stat-chip" id="chipCount">事件 <b>0</b> · 结局 <b>0</b> · 轨道 <b>0</b></span>
@@ -150,9 +151,11 @@
       <summary class="muted" style="cursor:pointer">怎么组织脑图？（点击展开规范）</summary>
       <div class="muted" style="margin-top:8px;line-height:1.8">
         中心主题 = 剧本名。它的下一级 = 事件；事件的下一级 = 选项。<br>
-        每条节点文字用 <code>|</code> 加元数据：<br>
-        事件：<code>社团招新 | year=大一·秋, phase=pre, days=40, desc=案发现场, branch=true, boss=true</code><br>
-        选项（分叉点用 lane 选轨道）：<code>加入辩论队 | d=一周两次, x=社交+9 学术+3 精力-8, o=结果语</code><br>
+        另有五个可选小节：<code># 阶段</code> <code># 轨道</code> <code># 随机事件池</code> <code># 特殊事件</code> <code># 结局</code>。<br>
+        数值是 8 维：学业 / 人际 / 心态 / 资源 / 金钱 / 技能 / 体魄 / 声望。<br>
+        事件：<code>社团招新 | year=大一·秋, stage=2, days=40, onlyCollege=计算机学院, settle=true, desc=案发现场</code><br>
+        选项（分叉点用 lane 选路线）：<code>加入辩论队 | d=一周两次, x=学业+8 技能+3, need=人际>40 声望>10, fallback=true, o=结果语</code><br>
+        特殊事件的触发条件写 <code>when=心态&lt;20</code>；结局写 <code>tier=顶级结局, when=学业&gt;90&amp;&amp;资源&gt;70</code>。<br>
         结尾也可直接贴缩进大纲 / Markdown（见「导出大纲」的格式）。
       </div>
     </details>
@@ -222,7 +225,8 @@
     var r=await api('/api/status');
     if(r.status===401){location.href='/admin';return;}
     var d=r.data||{};
-    $('chipCount').innerHTML='事件 <b>'+d.events+'</b> · 结局 <b>'+d.endings+'</b> · 轨道 <b>'+(d.lanes||[]).length+'</b>';
+    $('chipCount').innerHTML='事件 <b>'+d.events+'</b> · 结局 <b>'+d.endings+'</b> · 轨道 <b>'+(d.lanes||[]).length+'</b>'+
+      ' · 事件池 <b>'+(d.pool||0)+'</b> · 特殊事件 <b>'+(d.triggers||0)+'</b>';
     var dot=$('chipPub').querySelector('.status-dot');
     dot.className='status-dot'+(d.published?' pub':'');
     $('chipPub').innerHTML='<span class="status-dot'+(d.published?' pub':'')+'"></span>'+(d.published?'已发布 · '+d.title:'未发布 · '+d.title);
@@ -239,13 +243,20 @@
     renderLanes(r.data);
     renderEndings(r.data);
   }
+  var LABELS={gpa:'学业',social:'人际',mind:'心态',resource:'资源',money:'金钱',skill:'技能',body:'体魄',fame:'声望'};
   function statText(x){
     if(!x)return'';
-    var rev={academic:'学术',social:'社交',money:'搞钱',energy:'精力'};
     return Object.keys(x).map(function(k){
       var v=x[k];
-      return '<span class="stat'+(v<0?' neg':'')+'">'+rev[k]+(v>0?'+':'−')+Math.abs(v)+'</span>';
+      return '<span class="stat'+(v<0?' neg':'')+'">'+(LABELS[k]||k)+(v>0?'+':'−')+Math.abs(v)+'</span>';
     }).join('');
+  }
+  function reqText(o){
+    var p=[];
+    if(o.need)Object.keys(o.need).forEach(function(k){p.push((LABELS[k]||k)+'>'+o.need[k]);});
+    if(o.cap)Object.keys(o.cap).forEach(function(k){p.push((LABELS[k]||k)+'<'+o.cap[k]);});
+    if(o.needAny)p.push(Object.keys(o.needAny).map(function(k){return (LABELS[k]||k)+'>'+o.needAny[k];}).join(' 或 '));
+    return p.length?('<span class="stat">需要 '+p.join(' ')+'</span>'):'';
   }
   function renderLanes(game){
     var h=(game.lanes||[]).map(function(l){return '<span>'+l+'轨</span>';}).join('');
@@ -253,8 +264,9 @@
   }
   function renderEndings(game){
     var h=(game.endings||[]).map(function(e){
+      var head=(e.tier?e.tier+' · ':'')+(e.lane?e.lane:'通用');
       return '<div class="ending"><b>'+e.title+'</b>'+
-        '<span class="when">'+e.lane+(e.when?' · '+e.when:' · 兜底')+'</span>'+
+        '<span class="when">'+head+(e.when?' · '+e.when:' · 兜底')+'</span>'+
         (e.text?'<div class="text">'+e.text.slice(0,60)+'</div>':'')+'</div>';
     }).join('');
     $('endingsView').innerHTML=h||'<span class="muted">无结局设定</span>';
@@ -265,16 +277,20 @@
       var badges='';
       if(ev.branch)badges+='<span class="badge branch">分叉</span>';
       if(ev.boss)badges+='<span class="badge boss">Boss</span>';
-      if(ev.onlyLane)badges+='<span class="badge lane">'+ev.onlyLane+'轨专属</span>';
+      if(ev.settle)badges+='<span class="badge settle">结算</span>';
+      if(ev.onlyLane)badges+='<span class="badge lane">'+ev.onlyLane+'线专属</span>';
+      if(ev.onlyCollege)badges+='<span class="badge lane">'+ev.onlyCollege+'专属</span>';
       h+='<div class="node '+(ev.phase||'pre')+'">'+
         '<div class="ntitle">'+ev.title+badges+'</div>'+
-        '<div class="nmeta">'+(ev.year||'')+' · '+(ev.phase||'pre')+(ev.days?' · '+ev.days+'天':'')+'</div>'+
+        '<div class="nmeta">'+(ev.year||'')+' · '+(ev.phase||'pre')+
+        (ev.stage?' · 阶段'+ev.stage:'')+(ev.days?' · '+ev.days+'天':'')+'</div>'+
         (ev.desc?'<div class="nmeta">'+ev.desc+'</div>':'')+
         '<div class="opts">';
       (ev.options||[]).forEach(function(o){
         h+='<div class="opt">'+o.k+
-          (o.lane?'<span class="lane-tag">→ '+o.lane+'轨</span>':'')+
-          statText(o.x)+'</div>';
+          (o.lane?'<span class="lane-tag">→ '+o.lane+'线</span>':'')+
+          (o.fallback?'<span class="lane-tag">兜底</span>':'')+
+          reqText(o)+statText(o.x)+'</div>';
       });
       h+='</div></div>';
     });
